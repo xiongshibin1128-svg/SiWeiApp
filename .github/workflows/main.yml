@@ -16,11 +16,10 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
-        # 直接安装 flet，不再寻找 requirements.txt 防止报错
         pip install flet
 
     - name: Setup Flutter
@@ -31,7 +30,8 @@ jobs:
 
     - name: Flet Build APK
       run: |
-        flet build apk --verbose
+        # 关键修改：加上 yes | 自动同意所有提示
+        yes | flet build apk --verbose
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

@@ -20,8 +20,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        # 直接安装 flet，不再寻找 requirements.txt 防止报错
         pip install flet
-        pip install -r requirements.txt
 
     - name: Setup Flutter
       uses: subosito/flutter-action@v2

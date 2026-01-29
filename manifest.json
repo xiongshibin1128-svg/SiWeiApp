@@ -1,6 +1,6 @@
 {
-    "name": "thought_trainer",
-    "short_name": "thought_trainer",
+    "name": "life_book",
+    "short_name": "life_book",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",

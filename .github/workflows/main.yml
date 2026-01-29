@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK (Stable Pro)
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # 👇 关键：让它读取 requirements.txt 来安装
+        # 🌟 核心：严格按照我们锁定的版本安装零件
         pip install -r requirements.txt
 
     - name: Setup Flutter
@@ -32,8 +32,9 @@ jobs:
 
     - name: Flet Build APK
       run: |
-        # 加上 yes | 防止卡死
-        yes | flet build apk --verbose
+        # 🌟 增加 --no-cache 确保百分之百是全新的干净打包
+        # 这样能彻底杜绝“代码改了但手机上没变”的灵异事件
+        yes | flet build apk --verbose --no-cache
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

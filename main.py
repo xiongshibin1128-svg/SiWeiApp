@@ -36,6 +36,13 @@ LOADING_TIPS = [
 
 def main(page: ft.Page):
     page.title = "Day 4: 思维进阶训练营"
+    
+    # 【修复关键点 1】强制使用浅色模式 (解决文字看不清的问题)
+    page.theme_mode = ft.ThemeMode.LIGHT 
+    
+    # 【修复关键点 2】关闭 Material 3 的默认变色 (让卡片变回纯净的白色)
+    page.theme = ft.Theme(use_material3=False)
+    
     page.bgcolor = "#F5F7FA"
     page.scroll = ft.ScrollMode.AUTO
 
@@ -143,7 +150,6 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.CENTER,
         ),
         height=300,
-        # 【重要修复】使用坐标 (0,0) 代替 alignment.center，彻底解决报错
         alignment=ft.Alignment(0, 0), 
         visible=False
     )
@@ -420,7 +426,6 @@ def main(page: ft.Page):
         page.floating_action_button = None
         page.update()
 
-    # 【重要修复】使用坐标 (0, -1) 代替 alignment.top_center
     page.add(ft.Container(content=ft.Column([view_home, view_exam, view_result, view_history]), 
                           padding=20, width=400,
                           alignment=ft.Alignment(0, -1)))

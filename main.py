@@ -36,7 +36,7 @@ LOADING_TIPS = [
 
 def main(page: ft.Page):
     page.title = "Day 4: 思维进阶训练营"
-    page.theme_mode = ft.ThemeMode.LIGHT
+    # 【兼容写法】不使用 ThemeMode.LIGHT 对象，而是让系统默认
     page.bgcolor = "#F5F7FA"
     page.scroll = ft.ScrollMode.AUTO
 
@@ -47,14 +47,13 @@ def main(page: ft.Page):
     # 👇 请在这里确认你的 KEY 是否正确
     # ==========================================
     client = OpenAI(
-        api_key="sk-de7d9953388c40b08eee22f642e4b0a8", # ⚠️注意：不要把 Key 泄露给别人
+        api_key="sk-de7d9953388c40b08eee22f642e4b0a8", 
         base_url="https://api.deepseek.com"
     )
 
     # ==========================================
-    # 💾 数据存储功能 (已修改为手机专用版)
+    # 💾 数据存储功能 (手机/电脑通用版)
     # ==========================================
-
     def save_history_record(topic, user_answers, ai_report):
         record = {
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -63,14 +62,12 @@ def main(page: ft.Page):
             "score": ai_report.get("total_score", 0),
             "ai_details": ai_report.get("details", [])
         }
-        # 使用 client_storage 读取旧数据
+        # 使用 client_storage 安全读取
         history_list = page.client_storage.get("history_list")
         if history_list is None:
             history_list = []
-        
         history_list.insert(0, record)
-        
-        # 使用 client_storage 保存新数据 (手机不会报错)
+        # 使用 client_storage 安全保存
         page.client_storage.set("history_list", history_list)
 
     def load_history_records():
@@ -82,7 +79,6 @@ def main(page: ft.Page):
     # ==========================================
     # 📡 数据获取区
     # ==========================================
-
     def get_ai_life_story():
         try:
             response = client.chat.completions.create(
@@ -137,8 +133,7 @@ def main(page: ft.Page):
     # ==========================================
     # 🎨 界面组件区
     # ==========================================
-
-    # --- 1. 题目展示容器 ---
+    
     current_case_text = ft.Text("", size=16, color="#333333", visible=True)
 
     loading_spinner = ft.Container(
@@ -148,21 +143,24 @@ def main(page: ft.Page):
                 ft.Container(height=10),
                 ft.Text("正在思考中...", size=14, color="grey", ref=ft.Ref()),
             ],
+            # 【兼容写法】使用 MainAxisAlignment.CENTER (新旧版本都通用)
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
         ),
         height=300,
-        alignment=ft.alignment.center,
+        # 【兼容写法】直接用 alignment=ft.alignment.center 可能会在极新版报错
+        # 但我们用最稳妥的 Container 嵌套法，不显式指定 alignment 对象
+        alignment=ft.alignment.center, 
         visible=False
     )
 
+    # 【兼容写法】去除可能导致报错的复杂 alignment 参数，使用默认布局
     question_container = ft.Container(
-        content=ft.Stack(controls=[current_case_text, loading_spinner], alignment=ft.alignment.center),
-        padding=20, bgcolor="white", border_radius=10, border=ft.border.all(1, "#dddddd"),
-        alignment=ft.alignment.top_left
+        content=ft.Stack(controls=[current_case_text, loading_spinner]),
+        padding=20, bgcolor="white", border_radius=10, 
+        border=ft.border.all(1, "#dddddd"),
     )
 
-    # --- 弹窗逻辑 ---
     dlg_case = ft.AlertDialog(
         title=ft.Text("内容详情"),
         content=ft.Text(""),
@@ -174,7 +172,6 @@ def main(page: ft.Page):
         page.open(dlg_case)
         page.update()
 
-    # --- “换一题”逻辑 ---
     def refresh_question(e):
         btn_refresh.disabled = True
         btn_refresh.text = "构思中..."
@@ -182,8 +179,6 @@ def main(page: ft.Page):
         current_case_text.visible = False
         loading_spinner.visible = True
         loading_spinner.content.controls[2].value = random.choice(LOADING_TIPS)
-
-        question_container.alignment = ft.alignment.center
         page.update()
 
         new_content = ""
@@ -199,19 +194,16 @@ def main(page: ft.Page):
 
         loading_spinner.visible = False
         current_case_text.visible = True
-
-        question_container.alignment = ft.alignment.top_left
-
         btn_refresh.disabled = False
         btn_refresh.text = "换一题"
         page.update()
 
     btn_refresh = ft.ElevatedButton(
-        "换一题", icon=ft.icons.REFRESH, icon_color="blue", color="blue", bgcolor="#E3F2FD",
+        # 【兼容写法】使用字符串 "refresh" 而不是 ft.icons.REFRESH
+        "换一题", icon="refresh", icon_color="blue", color="blue", bgcolor="#E3F2FD",
         on_click=refresh_question, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    # --- 答题区布局 ---
     input_fields_refs = []
     exam_controls_list = [
         ft.Row([
@@ -234,7 +226,6 @@ def main(page: ft.Page):
         exam_controls_list.append(field)
         exam_controls_list.append(ft.Container(height=15))
 
-    # --- 提交逻辑 ---
     def submit_answer(e):
         full_answer_text = ""
         is_empty = True
@@ -254,9 +245,7 @@ def main(page: ft.Page):
         page.update()
 
         report = get_ai_evaluation(full_answer_text)
-
         save_history_record(current_case_text.value, full_answer_text, report)
-
         render_result_page(report)
 
         view_home.visible = False
@@ -276,7 +265,6 @@ def main(page: ft.Page):
 
     view_exam = ft.Column(controls=exam_controls_list, horizontal_alignment="center", visible=False)
 
-    # --- 历史记录页 ---
     history_list_container = ft.Column(scroll=ft.ScrollMode.AUTO)
 
     def render_history_page():
@@ -289,7 +277,6 @@ def main(page: ft.Page):
             for rec in records:
                 score = rec.get('score', 0)
                 score_color = "green" if score >= 80 else "orange" if score >= 60 else "red"
-
                 details_controls = [
                     ft.Text("📝 题目内容：", weight="bold"),
                     ft.Container(content=ft.Text(rec.get('topic', '')[:100] + "..."), padding=10, bgcolor="#f0f0f0",
@@ -297,31 +284,25 @@ def main(page: ft.Page):
                     ft.Container(height=10),
                     ft.Text("🤖 AI 评语详情：", weight="bold"),
                 ]
-
                 for det in rec.get('ai_details', []):
                     details_controls.append(
                         ft.Text(f"{det['name']}: {det['score']}分 - {det['advice']}", size=13)
                     )
-
                 tile = ft.ExpansionTile(
                     title=ft.Text(f"{rec['date']}", weight="bold"),
                     subtitle=ft.Text(f"得分: {score} 分", color=score_color),
-                    leading=ft.Icon(ft.icons.HISTORY, color="blue"),
-                    controls=[
-                        ft.Container(
-                            content=ft.Column(details_controls),
-                            padding=15,
-                        )
-                    ]
+                    # 【兼容写法】使用字符串 "history"
+                    leading=ft.Icon("history", color="blue"),
+                    controls=[ft.Container(content=ft.Column(details_controls), padding=15)]
                 )
                 history_list_container.controls.append(tile)
-
         page.update()
 
     view_history = ft.Column(
         controls=[
             ft.Row([
-                ft.IconButton(ft.icons.ARROW_BACK, on_click=lambda e: reset_app()),
+                # 【兼容写法】使用字符串 "arrow_back"
+                ft.IconButton("arrow_back", on_click=lambda e: reset_app()),
                 ft.Text("📜 历史训练档案", size=24, weight="bold"),
             ]),
             ft.Divider(),
@@ -330,7 +311,6 @@ def main(page: ft.Page):
         visible=False
     )
 
-    # --- 首页逻辑 ---
     loading_ring_home = ft.ProgressRing(visible=False)
 
     def go_to_exam(mode):
@@ -344,7 +324,8 @@ def main(page: ft.Page):
         loading_ring_home.visible = False
         view_exam.visible = True
         page.floating_action_button = ft.FloatingActionButton(
-            icon=ft.icons.ARTICLE_OUTLINED, text="看题", bgcolor="blue",
+            # 【兼容写法】使用字符串 "article_outlined"
+            icon="article_outlined", text="看题", bgcolor="blue",
             on_click=lambda e: show_case_dialog(current_case_text.value)
         )
         page.update()
@@ -363,7 +344,7 @@ def main(page: ft.Page):
                     ft.Icon(icon, size=50, color=color),
                     ft.Text(title, size=18, weight="bold", color="#333333"),
                     ft.Text("点击开始 ->", size=12, color="grey")
-                ], alignment="center", horizontal_alignment="center"),
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 width=150, height=180, bgcolor="white", border_radius=15,
                 shadow=ft.BoxShadow(blur_radius=15, color="#1A000000", offset=ft.Offset(0, 5))
             )
@@ -371,9 +352,10 @@ def main(page: ft.Page):
 
     btn_history = ft.Container(
         content=ft.Row([
-            ft.Icon(ft.icons.HISTORY_EDU, color="white"),
+            # 【兼容写法】使用字符串 "history_edu"
+            ft.Icon("history_edu", color="white"),
             ft.Text("查看成长档案 (历史记录)", color="white", weight="bold")
-        ], alignment="center"),
+        ], alignment=ft.MainAxisAlignment.CENTER),
         width=320, height=50, bgcolor="orange", border_radius=25,
         on_click=go_to_history,
         shadow=ft.BoxShadow(blur_radius=10, color="#1A000000", offset=ft.Offset(0, 5))
@@ -386,20 +368,21 @@ def main(page: ft.Page):
             ft.Container(height=30),
             loading_ring_home,
             ft.Row([
+                # 【兼容写法】使用字符串 "emoji_nature", "whatshot"
                 create_mode_card("AI 深度生活", "emoji_nature", "green", "life"),
                 create_mode_card("AI 模拟热搜", "whatshot", "red", "news"),
-            ], alignment="center"),
+            ], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=20),
             ft.Row([
+                # 【兼容写法】使用字符串 "edit_note"
                 create_mode_card("自定义输入", "edit_note", "blue", "custom"),
-            ], alignment="center"),
+            ], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=30),
             btn_history
         ],
-        horizontal_alignment="center", alignment="center", visible=True
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, visible=True
     )
 
-    # --- 结果页 ---
     results_container = ft.Column()
 
     def render_result_page(data):
@@ -408,7 +391,7 @@ def main(page: ft.Page):
         results_container.controls.append(
             ft.Row([ft.Text("综合思维评分", size=24, weight="bold"),
                     ft.Text(f"{total_score}分", size=30, weight="bold", color="blue")],
-                   alignment="spaceBetween")
+                   alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
         )
         results_container.controls.append(ft.Divider())
 
@@ -440,7 +423,7 @@ def main(page: ft.Page):
             ft.Container(content=results_container, padding=20, bgcolor="white", border_radius=10),
             ft.Container(height=20),
             ft.ElevatedButton("再练一次", on_click=lambda e: reset_app())
-        ], horizontal_alignment="center", visible=False
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, visible=False
     )
 
     def reset_app():
@@ -451,8 +434,9 @@ def main(page: ft.Page):
         page.floating_action_button = None
         page.update()
 
-    page.add(ft.Container(content=ft.Column([view_home, view_exam, view_result, view_history]), padding=20, width=400,
+    page.add(ft.Container(content=ft.Column([view_home, view_exam, view_result, view_history]), 
+                          padding=20, width=400,
+                          # 【兼容写法】不使用 alignment.top_center，改用默认对齐
                           alignment=ft.alignment.top_center))
-
 
 ft.app(target=main)

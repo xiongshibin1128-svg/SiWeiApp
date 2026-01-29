@@ -1,2 +1,2 @@
-flet==0.25.2
-openai==1.50.0
+flet
+openai

@@ -1,15 +1,12 @@
-name: Deploy to GitHub Pages
+name: Build APK (Compatibility Mode)
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,14 +22,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Flet Build Web
-        run: |
-          # 🌟 修复核心：加上 yes | 自动同意安装 Flutter SDK
-          # --base-url 是必须的，否则网页资源会加载失败
-          yes | flet build web --base-url /${{ github.event.repository.name }}/
-
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          folder: build/web
-          branch: gh-pages
+          flutter-version: '3.22.x'
+          channel: 'stable'
+
+      - name: Flet Build APK
+        run: |
+          # 🌟 核心修复命令 🌟
+          # 1. --no-android-impeller: 关闭导致白屏的新渲染引擎，使用最稳的旧引擎
+          # 2. --include-all-platforms: 同时打包 32位和64位架构，确保旧手机也能装
+          yes | flet build apk --verbose --no-android-impeller --include-all-platforms
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/apk/app-release.apk

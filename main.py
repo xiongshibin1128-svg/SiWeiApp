@@ -36,11 +36,9 @@ LOADING_TIPS = [
 
 def main(page: ft.Page):
     page.title = "Day 4: 思维进阶训练营"
-    # 【兼容写法】不使用 ThemeMode.LIGHT 对象，而是让系统默认
     page.bgcolor = "#F5F7FA"
     page.scroll = ft.ScrollMode.AUTO
 
-    # 🌟 全局变量
     current_mode = "random"
 
     # ==========================================
@@ -52,7 +50,7 @@ def main(page: ft.Page):
     )
 
     # ==========================================
-    # 💾 数据存储功能 (手机/电脑通用版)
+    # 💾 数据存储功能
     # ==========================================
     def save_history_record(topic, user_answers, ai_report):
         record = {
@@ -62,12 +60,10 @@ def main(page: ft.Page):
             "score": ai_report.get("total_score", 0),
             "ai_details": ai_report.get("details", [])
         }
-        # 使用 client_storage 安全读取
         history_list = page.client_storage.get("history_list")
         if history_list is None:
             history_list = []
         history_list.insert(0, record)
-        # 使用 client_storage 安全保存
         page.client_storage.set("history_list", history_list)
 
     def load_history_records():
@@ -143,18 +139,15 @@ def main(page: ft.Page):
                 ft.Container(height=10),
                 ft.Text("正在思考中...", size=14, color="grey", ref=ft.Ref()),
             ],
-            # 【兼容写法】使用 MainAxisAlignment.CENTER (新旧版本都通用)
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
         ),
         height=300,
-        # 【兼容写法】直接用 alignment=ft.alignment.center 可能会在极新版报错
-        # 但我们用最稳妥的 Container 嵌套法，不显式指定 alignment 对象
-        alignment=ft.alignment.center, 
+        # 【重要修复】使用坐标 (0,0) 代替 alignment.center，彻底解决报错
+        alignment=ft.Alignment(0, 0), 
         visible=False
     )
 
-    # 【兼容写法】去除可能导致报错的复杂 alignment 参数，使用默认布局
     question_container = ft.Container(
         content=ft.Stack(controls=[current_case_text, loading_spinner]),
         padding=20, bgcolor="white", border_radius=10, 
@@ -199,7 +192,6 @@ def main(page: ft.Page):
         page.update()
 
     btn_refresh = ft.ElevatedButton(
-        # 【兼容写法】使用字符串 "refresh" 而不是 ft.icons.REFRESH
         "换一题", icon="refresh", icon_color="blue", color="blue", bgcolor="#E3F2FD",
         on_click=refresh_question, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
@@ -291,7 +283,6 @@ def main(page: ft.Page):
                 tile = ft.ExpansionTile(
                     title=ft.Text(f"{rec['date']}", weight="bold"),
                     subtitle=ft.Text(f"得分: {score} 分", color=score_color),
-                    # 【兼容写法】使用字符串 "history"
                     leading=ft.Icon("history", color="blue"),
                     controls=[ft.Container(content=ft.Column(details_controls), padding=15)]
                 )
@@ -301,7 +292,6 @@ def main(page: ft.Page):
     view_history = ft.Column(
         controls=[
             ft.Row([
-                # 【兼容写法】使用字符串 "arrow_back"
                 ft.IconButton("arrow_back", on_click=lambda e: reset_app()),
                 ft.Text("📜 历史训练档案", size=24, weight="bold"),
             ]),
@@ -324,7 +314,6 @@ def main(page: ft.Page):
         loading_ring_home.visible = False
         view_exam.visible = True
         page.floating_action_button = ft.FloatingActionButton(
-            # 【兼容写法】使用字符串 "article_outlined"
             icon="article_outlined", text="看题", bgcolor="blue",
             on_click=lambda e: show_case_dialog(current_case_text.value)
         )
@@ -352,7 +341,6 @@ def main(page: ft.Page):
 
     btn_history = ft.Container(
         content=ft.Row([
-            # 【兼容写法】使用字符串 "history_edu"
             ft.Icon("history_edu", color="white"),
             ft.Text("查看成长档案 (历史记录)", color="white", weight="bold")
         ], alignment=ft.MainAxisAlignment.CENTER),
@@ -368,13 +356,11 @@ def main(page: ft.Page):
             ft.Container(height=30),
             loading_ring_home,
             ft.Row([
-                # 【兼容写法】使用字符串 "emoji_nature", "whatshot"
                 create_mode_card("AI 深度生活", "emoji_nature", "green", "life"),
                 create_mode_card("AI 模拟热搜", "whatshot", "red", "news"),
             ], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=20),
             ft.Row([
-                # 【兼容写法】使用字符串 "edit_note"
                 create_mode_card("自定义输入", "edit_note", "blue", "custom"),
             ], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=30),
@@ -434,9 +420,9 @@ def main(page: ft.Page):
         page.floating_action_button = None
         page.update()
 
+    # 【重要修复】使用坐标 (0, -1) 代替 alignment.top_center
     page.add(ft.Container(content=ft.Column([view_home, view_exam, view_result, view_history]), 
                           padding=20, width=400,
-                          # 【兼容写法】不使用 alignment.top_center，改用默认对齐
-                          alignment=ft.alignment.top_center))
+                          alignment=ft.Alignment(0, -1)))
 
 ft.app(target=main)

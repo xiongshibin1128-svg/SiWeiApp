@@ -1,11 +1,10 @@
 [project]
-name = "thought_trainer"
-version = "0.1.0"
+name = "life_book"
+version = "1.0.0"
 dependencies = [
-    "flet>=0.80.4",
-    "openai>=1.50.0",
+    "flet",
+    "openai",
 ]
 
 [tool.flet]
-# 🌟 这行最关键：它像一张“强力通行证”，强迫打包机必须带上 openai
 dependencies = ["openai"]

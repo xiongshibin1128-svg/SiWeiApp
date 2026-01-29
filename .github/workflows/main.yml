@@ -31,7 +31,7 @@ jobs:
     - name: Flet Build APK
       run: |
         # 使用 --no-cache 确保百分之百是全新的干净打包
-        yes | flet build apk --verbose --no-cache
+        yes | flet build apk --verbose 
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

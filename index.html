@@ -1,132 +1,545 @@
-<!DOCTYPE html><html><head>
-  <base href="/">
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="">
-
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="life_book">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon-192.png">
-
-  <link rel="icon" type="image/png" href="favicon.png">
-
-  <title>life_book</title>
-  <link rel="manifest" href="manifest.json">
-
-  <script>
-    var flet = {
-      pyodide: true,
-      multiView: false,
-      noCdn: "False".toLowerCase() == "true",
-      webSocketEndpoint: "/ws",
-      entrypointBaseUrl: "/", 
-      assetBase: "/",
-      routeUrlStrategy: "path",
-      
-      // 👇👇👇 重点修改在这里：强制加载 ssl, flet, openai 👇👇👇
-      pyodidePackages: ["ssl", "flet", "openai"],
-      // 👆👆👆 这一行就是解决报错的关键 👆👆👆
-
-      canvasKitBaseUrl: "/canvaskit/",
-      pyodideUrl: "/pyodide/pyodide.js",
-      pythonModuleName: "main",
-      webRenderer: "auto",
-      fontFallbackBaseUrl: "assets/fonts/", // for Noto Emoji, use Google CDN
-      appPackageUrl: "assets/app/app.zip"
-    }
-
-    flet.flutterAppLoaded = new Promise((resolve) => {
-      flet.flutterAppResolve = resolve;
-    });
-
-    flet.flutterAppLoaded.then((flutterApp) => {
-      console.log("Flutter app loaded");
-    });
-  </script>
-  <script src="python.js"></script>
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
-
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #ffffff;
-          background-size: 100% 100%;
-    }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #222222;
-          }
-    }
-  </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
-  </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生命之书：深度思维训练</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root { --primary-color: #5a67d8; --secondary-color: #f0f4f8; }
+        body { background-color: var(--secondary-color); font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333; padding-bottom: 50px; }
+        .main-container { max-width: 900px; margin: 30px auto; background: #fff; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .content-body { padding: 40px; }
+        .btn-primary-custom { background-color: var(--primary-color); border: none; padding: 12px 24px; font-size: 1.1rem; border-radius: 8px; transition: all 0.3s; }
+        .btn-primary-custom:hover { background-color: #4c51bf; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(90,103,216,0.3); }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .loading-text { margin-top: 20px; font-size: 1.2rem; color: var(--primary-color); font-weight: 500; }
+        .scenario-box, .analysis-box { background-color: #f9fafb; border-left: 5px solid var(--primary-color); padding: 25px; border-radius: 8px; line-height: 1.8; font-size: 1.05rem; white-space: pre-wrap; }
+        .question-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 25px; background-color: #fff; }
+        .question-title { color: var(--primary-color); font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; }
+        .score-card { background: #fff; border-radius: 10px; border: 1px solid #eaeaea; margin-bottom: 15px; overflow: hidden; }
+        .score-header { background: #f8fafc; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eaeaea; }
+        .score-badge { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); }
+        .score-reason { padding: 20px; color: #666; font-size: 0.95rem; background-color: #fffbed; border-left: 4px solid #f6ad55; }
+        /* 日历样式 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 20px; }
+        .calendar-day-header { text-align: center; font-weight: bold; color: #718096; padding-bottom: 10px; }
+        .calendar-day { aspect-ratio: 1; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; background: #fff; transition: all 0.2s; }
+        .calendar-day:hover { background-color: #edf2f7; }
+        .calendar-day.has-data { background-color: #c3dafe; color: #434190; font-weight: bold; border-color: #a3bffa; }
+        .calendar-day.today { border: 2px solid var(--primary-color); }
+        .step-hidden { display: none; }
+    </style>
 </head>
-
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <script src="flutter_bootstrap.js" async=""></script>
+
+<div id="globalLoading" class="loading-overlay step-hidden">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+    <div class="loading-text" id="loadingText">AI 正在深度思考中...</div>
+    <div class="text-muted small mt-2">生成长文和深度分析需要一些时间，请耐心等待 (大约 15-30 秒)</div>
+</div>
+
+<div class="main-container">
+    <div class="header">
+        <h1><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书：每日深度思维训练</h1>
+        <p class="opacity-75 mt-2">探索生活哲学，实现个人成长</p>
+    </div>
+
+    <div class="content-body">
+        
+        <div id="setupArea" class="mb-5">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-shield-lock-fill me-3 fs-4"></i>
+                <div>
+                    首次使用需要设置 OpenAI API Key。Key 保存在你的本地浏览器中，安全无虞。
+                </div>
+            </div>
+            <div class="input-group mb-3">
+                <span class="input-group-text">API Key</span>
+                <input type="password" id="apiKeyInput" class="form-control" placeholder="sk-...">
+                <button class="btn btn-outline-secondary" type="button" id="saveKeyBtn">保存 Key</button>
+            </div>
+        </div>
+
+        <div id="homeView" class="step-hidden">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0">我的复盘日历</h3>
+                <button id="startDailyBtn" class="btn btn-primary-custom">
+                    <i class="bi bi-play-circle-fill me-2"></i>开始今日思考
+                </button>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <button class="btn btn-outline-secondary btn-sm" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i> 上个月</button>
+                <h4 id="currentMonthLabel" class="mb-0"></h4>
+                <button class="btn btn-outline-secondary btn-sm" onclick="changeMonth(1)">下个月 <i class="bi bi-chevron-right"></i></button>
+            </div>
+            <div class="calendar-grid mb-3">
+                <div class="calendar-day-header">日</div><div class="calendar-day-header">一</div><div class="calendar-day-header">二</div><div class="calendar-day-header">三</div><div class="calendar-day-header">四</div><div class="calendar-day-header">五</div><div class="calendar-day-header">六</div>
+            </div>
+            <div id="calendarDays" class="calendar-grid">
+                </div>
+        </div>
 
 
+        <div id="processView" class="step-hidden">
+             <div class="d-flex justify-content-between mb-4">
+                <button class="btn btn-outline-secondary btn-sm" id="backToHomeBtn"><i class="bi bi-house-door"></i> 回到主页</button>
+                <span class="badge bg-primary align-self-center p-2" id="stepIndicator">步骤 1/5</span>
+             </div>
 
-</body></html>
+            <div id="step1_Scenario" class="step-hidden">
+                <h3 class="mb-3"><i class="bi bi-lightbulb me-2" style="color: #f6ad55;"></i>今日生活事例</h3>
+                <div class="scenario-box" id="scenarioText"></div>
+                <div class="text-center mt-4">
+                    <button id="startQuestionsBtn" class="btn btn-primary-custom w-50">阅读完毕，开始深度追问 <i class="bi bi-arrow-right ms-2"></i></button>
+                </div>
+            </div>
+
+            <div id="step_Question" class="step-hidden">
+                <div class="question-card">
+                    <div class="question-title fs-4">
+                        <i class="bi bi-question-circle-fill me-3"></i> 深度追问 <span id="questionNumber">1</span>/3
+                    </div>
+                    <p class="fs-5 mb-4" id="questionText"></p>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">你的深度思考：</label>
+                        <textarea class="form-control" id="userAnswer" rows="6" placeholder="请沉下心来，真诚地回答..."></textarea>
+                    </div>
+                    <button id="nextQuestionBtn" class="btn btn-primary-custom w-100">提交回答，进入下一环 <i class="bi bi-arrow-down ms-2"></i></button>
+                </div>
+            </div>
+
+            <div id="step_Result" class="step-hidden">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);"><i class="bi bi-clipboard-data-fill me-2"></i>深度评估报告</h2>
+                
+                <h4 class="mb-3"><i class="bi bi-list-check me-2"></i>七维度严谨打分</h4>
+                <p class="text-muted small mb-4">AI 基于你的回答，对以下维度进行了严格评估并提供了扣分逻辑。</p>
+                <div id="scoresList">
+                    </div>
+
+                <h4 class="mt-5 mb-3"><i class="bi bi-mortarboard-fill me-2"></i>综合分析与提升建议</h4>
+                <div class="analysis-box" id="finalAnalysis"></div>
+
+                <div class="text-center mt-5">
+                     <button id="finishDayBtn" class="btn btn-success btn-lg px-5"><i class="bi bi-check-circle-fill me-2"></i>完成今日复盘并保存</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="historyView" class="step-hidden">
+             <button class="btn btn-outline-secondary btn-sm mb-4" id="backFromHistoryBtn"><i class="bi bi-arrow-left"></i> 返回日历</button>
+             <h3 id="historyDateLabel" class="mb-4"></h3>
+             
+             <ul class="nav nav-tabs mb-3" id="historyTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="tab-scenario" data-bs-toggle="tab" data-bs-target="#pane-scenario" type="button" role="tab">事例与问答</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="tab-report" data-bs-toggle="tab" data-bs-target="#pane-report" type="button" role="tab">评估报告</button>
+                </li>
+              </ul>
+              <div class="tab-content p-3 border border-top-0 rounded-bottom bg-white" id="historyTabContent">
+                <div class="tab-pane fade show active" id="pane-scenario" role="tabpanel">
+                    <h5>当日事例：</h5>
+                    <div class="scenario-box mb-4 small" id="historyScenario"></div>
+                    <h5>你的回答：</h5>
+                    <div id="historyQnA"></div>
+                </div>
+                <div class="tab-pane fade" id="pane-report" role="tabpanel">
+                    <div id="historyScores"></div>
+                    <h5 class="mt-4">综合建议：</h5>
+                    <div class="analysis-box small" id="historyAnalysis"></div>
+                </div>
+              </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ==========================================
+    // 配置区域 (你可以修改这里的维度)
+    // ==========================================
+    const Dimensions = [
+        "自我觉知 (Self-Awareness)",
+        "价值判断 (Value Judgment)",
+        "情绪掌舵 (Emotional Regulation)",
+        "深度思考 (Critical Thinking)",
+        "意义构建 (Meaning Making)",
+        "视角多元性 (Perspective Taking)",
+        "知行合一 (Action Alignment)"
+    ];
+    const DIMENSIONS_STR = Dimensions.join(", ");
+
+    // ==========================================
+    // 全局变量与状态管理
+    // ==========================================
+    let apiKey = localStorage.getItem('openai_api_key') || '';
+    let currentData = {
+        date: null,
+        scenario: "",
+        qna: [], // [{question: "", answer: ""}, ...]
+        scores: [],
+        analysis: ""
+    };
+    let currentQuestionIndex = 0;
+    let currentDateForCalendar = new Date();
+
+    // DOM 元素引用
+    const views = {
+        home: document.getElementById('homeView'),
+        process: document.getElementById('processView'),
+        history: document.getElementById('historyView'),
+        setup: document.getElementById('setupArea')
+    };
+    const loadingOverlay = document.getElementById('globalLoading');
+    const loadingText = document.getElementById('loadingText');
+    const stepIndicator = document.getElementById('stepIndicator');
+
+    // ==========================================
+    // 初始化与事件监听
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        checkApiKeyStatus();
+        renderCalendar();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        document.getElementById('saveKeyBtn').addEventListener('click', saveApiKey);
+        document.getElementById('startDailyBtn').addEventListener('click', startDailyProcess);
+        document.getElementById('backToHomeBtn').addEventListener('click', showHomeView);
+        document.getElementById('startQuestionsBtn').addEventListener('click', startQuestionFlow);
+        document.getElementById('nextQuestionBtn').addEventListener('click', handleNextQuestion);
+        document.getElementById('finishDayBtn').addEventListener('click', finishAndSave);
+        document.getElementById('backFromHistoryBtn').addEventListener('click', showHomeView);
+    }
+
+    // ==========================================
+    // 视图切换与辅助函数
+    // ==========================================
+    function showView(viewName) {
+        Object.values(views).forEach(v => v.classList.add('step-hidden'));
+        views[viewName].classList.remove('step-hidden');
+        if (viewName === 'home') renderCalendar();
+    }
+
+    function showHomeView() { showView('home'); }
+
+    function checkApiKeyStatus() {
+        if (apiKey) {
+            views.setup.classList.add('step-hidden');
+            showHomeView();
+        } else {
+            views.setup.classList.remove('step-hidden');
+        }
+    }
+
+    function saveApiKey() {
+        const input = document.getElementById('apiKeyInput').value.trim();
+        if (input.startsWith('sk-')) {
+            apiKey = input;
+            localStorage.setItem('openai_api_key', apiKey);
+            checkApiKeyStatus();
+            alert('API Key 已保存！');
+        } else {
+            alert('请输入有效的 OpenAI API Key (以 sk- 开头)');
+        }
+    }
+
+    function toggleLoading(show, text = "AI 正在思考中...") {
+        loadingText.textContent = text;
+        if (show) loadingOverlay.classList.remove('step-hidden');
+        else loadingOverlay.classList.add('step-hidden');
+    }
+
+    function updateStepIndicator(stepText) {
+        stepIndicator.textContent = stepText;
+    }
+
+    function getTodayString() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    // ==========================================
+    // 核心流程：每日思考
+    // ==========================================
+    async function startDailyProcess() {
+        // 重置当天数据
+        currentData = { date: getTodayString(), scenario: "", qna: [], scores: [], analysis: "" };
+        currentQuestionIndex = 0;
+
+        showView('process');
+        document.getElementById('step1_Scenario').classList.remove('step-hidden');
+        document.getElementById('step_Question').classList.add('step-hidden');
+        document.getElementById('step_Result').classList.add('step-hidden');
+        updateStepIndicator("步骤 1/5：生成事例");
+
+        // 开始生成事例
+        toggleLoading(true, "AI 正在为你生成今日的生活哲学事例 (约500字)...");
+        try {
+            const prompt = `请生成一个关于生活的意义、人生成长或生活哲学的现实事例。要求：内容真实、具体，有深度，字数在 500 字左右。侧重于个人内在成长和对生活的感悟，尽量避开纯粹的职业风险或利益博弈。`;
+            const scenario = await callOpenAI(prompt);
+            currentData.scenario = scenario;
+            document.getElementById('scenarioText').textContent = scenario;
+        } catch (error) {
+            alert("生成失败：" + error.message);
+            showHomeView();
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    async function startQuestionFlow() {
+        document.getElementById('step1_Scenario').classList.add('step-hidden');
+        document.getElementById('step_Question').classList.remove('step-hidden');
+        await askNextQuestion();
+    }
+
+    async function askNextQuestion() {
+        currentQuestionIndex++;
+        updateStepIndicator(`步骤 ${currentQuestionIndex + 1}/5：深度追问 ${currentQuestionIndex}`);
+        
+        document.getElementById('questionNumber').textContent = currentQuestionIndex;
+        document.getElementById('userAnswer').value = ""; // 清空回答框
+
+        toggleLoading(true, `AI 正在基于事例提出第 ${currentQuestionIndex} 个问题...`);
+        try {
+            let context = `事例内容：\n${currentData.scenario}\n\n`;
+            if (currentData.qna.length > 0) {
+                context += "之前的问答记录：\n";
+                currentData.qna.forEach((item, index) => {
+                    context += `问题 ${index + 1}: ${item.question}\n回答 ${index + 1}: ${item.answer}\n`;
+                });
+            }
+
+            const prompt = `${context}\n请基于以上事例${currentData.qna.length > 0 ? '和之前的回答' : ''}，围绕这7个维度 (${DIMENSIONS_STR})，提出第 ${currentQuestionIndex} 个具有启发性的深度问题。只返回问题本身。`;
+            const question = await callOpenAI(prompt);
+            document.getElementById('questionText').textContent = question;
+            // 临时保存问题，等待用户回答
+            currentData.qna.push({ question: question, answer: "" });
+
+        } catch (error) {
+            alert("提问失败：" + error.message);
+            showHomeView();
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    async function handleNextQuestion() {
+        const answer = document.getElementById('userAnswer').value.trim();
+        if (answer.length < 10) {
+            alert("请尽可能详细地阐述你的想法（至少10个字）。");
+            return;
+        }
+        // 保存当前问题的答案
+        currentData.qna[currentQuestionIndex - 1].answer = answer;
+
+        if (currentQuestionIndex < 3) {
+            // 继续下一个问题
+            await askNextQuestion();
+        } else {
+            // 3个问题结束，进入评分阶段
+            await startScoringAndAnalysis();
+        }
+    }
+
+    async function startScoringAndAnalysis() {
+        document.getElementById('step_Question').classList.add('step-hidden');
+        document.getElementById('step_Result').classList.remove('step-hidden');
+        updateStepIndicator("步骤 5/5：评估报告");
+
+        toggleLoading(true, "AI 正在进行严谨的七维度打分和综合分析，请稍候...");
+
+        try {
+            // 构建完整的上下文
+            let fullContext = `事例：${currentData.scenario}\n\n用户基于事例的深度问答：\n`;
+            currentData.qna.forEach((item, i) => fullContext += `Q${i+1}: ${item.question}\nA${i+1}: ${item.answer}\n`);
+
+            // Prompt 1: 请求 JSON 格式的评分
+            const scoringPrompt = `基于以下内容，请对用户进行严格评估。\n${fullContext}\n请针对这7个维度：${DIMENSIONS_STR}，分别打分（1-10分，十分严谨）。对于每个维度的扣分，必须提供严密的逻辑说明（50-100字），解释为什么没有得满分，指用户的局限性。请严格以 JSON 数组格式返回结果，格式如下：\n[{"dimension": "维度名", "score": 8, "reason": "扣分逻辑说明..."}, ...] \n只返回 JSON 数据，不要有其他文字。`;
+            
+            const scoresJsonStr = await callOpenAI(scoringPrompt, true); // 强制 JSON 模式
+            let scoresData;
+            try {
+                scoresData = JSON.parse(scoresJsonStr);
+            } catch (e) {
+                console.error("JSON 解析失败", scoresJsonStr);
+                // 如果AI没有返回纯JSON，尝试用正则提取
+                const match = scoresJsonStr.match(/\[.*\]/s);
+                if (match) scoresData = JSON.parse(match[0]);
+                else throw new Error("AI 返回格式错误，无法解析评分。");
+            }
+            currentData.scores = scoresData;
+            renderScores(scoresData, 'scoresList');
+
+            // Prompt 2: 请求综合分析和建议
+            const analysisPrompt = `基于之前的问答和评分结果，请给出综合分析。指出用户在思维方式上的主要局限性和不足（如认知偏差），并提供详尽的、可操作的提升建议。字数至少 200 字。`;
+            const analysis = await callOpenAI(analysisPrompt);
+            currentData.analysis = analysis;
+            document.getElementById('finalAnalysis').textContent = analysis;
+
+        } catch (error) {
+            alert("分析失败：" + error.message);
+            console.error(error);
+        } finally {
+            toggleLoading(false);
+        }
+    }
+
+    function renderScores(scoresData, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        scoresData.forEach(item => {
+            // 根据分数决定颜色
+            let badgeClass = 'text-danger';
+            if(item.score >= 8) badgeClass = 'text-success';
+            else if(item.score >= 6) badgeClass = 'text-warning';
+
+            const html = `
+                <div class="score-card">
+                    <div class="score-header">
+                        <h5 class="mb-0">${item.dimension}</h5>
+                        <span class="score-badge ${badgeClass}">${item.score} / 10</span>
+                    </div>
+                    <div class="score-reason">
+                        <strong><i class="bi bi-exclamation-circle me-1"></i>评估逻辑：</strong><br>
+                        ${item.reason}
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    function finishAndSave() {
+        // 保存到 LocalStorage
+        const storageKey = `life_book_data_${currentData.date}`;
+        localStorage.setItem(storageKey, JSON.stringify(currentData));
+        alert("今日复盘数据已保存！");
+        showHomeView();
+    }
+
+    // ==========================================
+    // AI 调用核心函数 (使用 fetch)
+    // ==========================================
+    async function callOpenAI(prompt, jsonMode = false) {
+        if (!apiKey) throw new Error("API Key 未设置");
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey
+        };
+        
+        const body = {
+            model: "gpt-3.5-turbo-16k", // 使用 16k 模型以支持更长的上下文
+            messages: [
+                { role: "system", content: `你是一位深刻的生活哲学导师和个人成长教练。你的目标是帮助用户通过深度思考提升思维维度。${jsonMode ? '请只输出符合要求的 JSON 数据。' : ''}` },
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.7
+        };
+
+        if (jsonMode) {
+            // 新版 OpenAI API 支持 json_object 模式，更稳定 (如果你的 Key 支持较新的模型如 gpt-4-turbo-preview，可以切换模型并取消下面注释)
+            // body.response_format = { type: "json_object" }; 
+            // 如果用 gpt-3.5，还是得靠提示词约束，不能加这个参数
+        }
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        if (data.error) {
+            throw new Error(data.error.message);
+        }
+        return data.choices[0].message.content.trim();
+    }
+
+
+    // ==========================================
+    // 日历与历史记录相关功能
+    // ==========================================
+    function renderCalendar() {
+        const year = currentDateForCalendar.getFullYear();
+        const month = currentDateForCalendar.getMonth();
+        document.getElementById('currentMonthLabel').textContent = `${year}年 ${month + 1}月`;
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDay = firstDay.getDay(); // 0 is Sunday
+
+        const calendarDays = document.getElementById('calendarDays');
+        calendarDays.innerHTML = '';
+
+        // 填充空白
+        for (let i = 0; i < startingDay; i++) {
+            calendarDays.innerHTML += '<div></div>';
+        }
+
+        const todayStr = getTodayString();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const storageKey = `life_book_data_${dateStr}`;
+            const hasData = localStorage.getItem(storageKey) !== null;
+            const isToday = dateStr === todayStr;
+
+            const dayDiv = document.createElement('div');
+            dayDiv.className = `calendar-day ${hasData ? 'has-data' : ''} ${isToday ? 'today' : ''}`;
+            dayDiv.textContent = day;
+            if (hasData) {
+                dayDiv.title = "点击查看当日复盘";
+                dayDiv.onclick = () => loadHistory(dateStr);
+            }
+            calendarDays.appendChild(dayDiv);
+        }
+    }
+
+    function changeMonth(delta) {
+        currentDateForCalendar.setMonth(currentDateForCalendar.getMonth() + delta);
+        renderCalendar();
+    }
+
+    function loadHistory(dateStr) {
+        const data = JSON.parse(localStorage.getItem(`life_book_data_${dateStr}`));
+        if (!data) return;
+
+        document.getElementById('historyDateLabel').textContent = `${dateStr} 复盘回顾`;
+        document.getElementById('historyScenario').textContent = data.scenario;
+        
+        const qnaContainer = document.getElementById('historyQnA');
+        qnaContainer.innerHTML = '';
+        data.qna.forEach((item, i) => {
+            qnaContainer.innerHTML += `
+                <div class="mb-3 border-bottom pb-3">
+                    <div class="fw-bold text-primary">Q${i+1}: ${item.question}</div>
+                    <div class="mt-2 bg-light p-2 rounded">${item.answer}</div>
+                </div>
+            `;
+        });
+
+        renderScores(data.scores, 'historyScores');
+        document.getElementById('historyAnalysis').textContent = data.analysis;
+
+        // 重置 Tab 显示
+        const firstTab = new bootstrap.Tab(document.getElementById('tab-scenario'));
+        firstTab.show();
+
+        showView('history');
+    }
+
+</script>
+</body>
+</html>

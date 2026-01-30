@@ -74,9 +74,8 @@
 
 <script>
     // ==========================================
-    // ⚠️ 唯一需要修改的地方：填入你的 Worker 地址
-    // 例如: const WORKER_URL = "https://proxy-helper.xxx.workers.dev";
-    const WORKER_URL = "purple-flower-d965.xiongshibin1128.workers.dev"; 
+    // ⚠️ 已修复：添加了 https:// 并去除了换行符
+    const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
     const DIMENSIONS = ["自我觉知", "价值判断", "情绪掌舵", "深度思考", "意义构建", "视角多元性", "知行合一"];
@@ -98,7 +97,7 @@
     }
 
     // --- AI 请求 (走 Worker 代理) ---
-    async function callAI(prompt) {
+    async function callAI(promptText) {
         let key = getKey();
         if(!key) {
             key = prompt("请输入你的 OpenAI API Key (sk-开头):");
@@ -108,7 +107,8 @@
 
         // 拼接代理地址
         const targetEndpoint = "/v1/chat/completions"; 
-        const finalUrl = WORKER_URL + targetEndpoint;
+        const baseUrl = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL;
+        const finalUrl = baseUrl + targetEndpoint;
 
         try {
             const resp = await fetch(finalUrl, {
@@ -118,7 +118,7 @@
                     model: "gpt-3.5-turbo-16k",
                     messages: [
                         {role: "system", content: "你是一位生活哲学导师。"},
-                        {role: "user", content: prompt}
+                        {role: "user", content: promptText} 
                     ]
                 })
             });
@@ -126,19 +126,19 @@
             if(json.error) throw new Error(json.error.message);
             return json.choices[0].message.content;
         } catch (e) {
-            alert("请求失败: " + e.message + "\n请检查 Worker 地址是否填对，或 Key 是否有效。");
+            alert("请求失败: " + e.message + "\n\n请检查：API Key 是否有效，或网络是否连接。");
             return null;
         }
     }
 
     // --- 业务逻辑 ---
     async function startDaily() {
-        if(WORKER_URL.includes("在这里填入")) { alert("请先去 index.html 第 126 行填入你的 Worker 地址！"); return; }
+        if(WORKER_URL.includes("在这里填入")) { alert("请先去 index.html 代码里设置 WORKER_URL！"); return; }
         
         switchView('viewScenario');
         showLoading(true, "正在生成今日事例 (500字)...");
-        const prompt = "生成一个关于生活意义与哲学的真实感人事例，500字左右。避开职场博弈，侧重个人成长。";
-        const res = await callAI(prompt);
+        const p = "生成一个关于生活意义与哲学的真实感人事例，500字左右。避开职场博弈，侧重个人成长。";
+        const res = await callAI(p);
         if(res) {
             data.scenario = res;
             document.getElementById('textScenario').textContent = res;
@@ -156,8 +156,8 @@
         document.getElementById('inputAnswer').value = "";
         showLoading(true, `正在构思第 ${step} 个追问...`);
         
-        const prompt = `事例：${data.scenario}\n历史问答：${JSON.stringify(data.qna)}\n请围绕这7个维度：${DIMENSIONS.join(',')}，提出第${step}个深度问题。`;
-        const res = await callAI(prompt);
+        const p = `事例：${data.scenario}\n历史问答：${JSON.stringify(data.qna)}\n请围绕这7个维度：${DIMENSIONS.join(',')}，提出第${step}个深度问题。`;
+        const res = await callAI(p);
         if(res) {
             data.qna.push({q: res, a: ""});
             document.getElementById('textQuestion').textContent = res;
@@ -186,11 +186,21 @@
 
         if(res1 && res2) {
             try {
-                data.scores = JSON.parse(res1.match(/\[.*\]/s)[0]);
+                const jsonMatch = res1.match(/\[.*\]/s);
+                if(jsonMatch) {
+                    data.scores = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error("格式错误");
+                }
                 data.advice = res2;
                 renderResult();
                 localStorage.setItem('life_log_' + data.date, JSON.stringify(data));
-            } catch(e) { alert("解析评分失败，请重试"); }
+            } catch(e) { 
+                alert("AI 返回的评分格式有点问题，不过不影响建议阅读。"); 
+                document.getElementById('scoreList').innerHTML = "评分解析失败，请查看下方建议。";
+                data.advice = res2;
+                document.getElementById('textAdvice').textContent = data.advice;
+            }
         }
         showLoading(false);
     }
@@ -213,7 +223,7 @@
         const d = new Date(); d.setDate(d.getDate() - (27-i));
         const k = 'life_log_' + d.toLocaleDateString();
         const has = localStorage.getItem(k);
-        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if('${has}') alert('历史查看功能待开发')">${d.getDate()}</div>`;
+        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('查看历史功能开发中，数据已保存在浏览器')">${d.getDate()}</div>`;
     }
 </script>
 </body>

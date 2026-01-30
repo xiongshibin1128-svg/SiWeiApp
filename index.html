@@ -23,6 +23,11 @@
       entrypointBaseUrl: "/", 
       assetBase: "/",
       routeUrlStrategy: "path",
+      
+      // 👇👇👇 重点修改在这里：强制加载 ssl, flet, openai 👇👇👇
+      pyodidePackages: ["ssl", "flet", "openai"],
+      // 👆👆👆 这一行就是解决报错的关键 👆👆👆
+
       canvasKitBaseUrl: "/canvaskit/",
       pyodideUrl: "/pyodide/pyodide.js",
       pythonModuleName: "main",

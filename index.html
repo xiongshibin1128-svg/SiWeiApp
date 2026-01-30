@@ -29,14 +29,13 @@
 
 <div id="loading" class="loading-mask hidden">
     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-    <div class="mt-3 fs-5 fw-bold text-primary" id="loadingText">AI 正在深度思考...</div>
-    <div class="text-muted small mt-2">生成长文需要较长时间，请耐心等待</div>
+    <div class="mt-3 fs-5 fw-bold text-primary" id="loadingText">DeepSeek 正在思考...</div>
 </div>
 
 <div class="app-container">
     <div class="header">
         <h1 class="fw-bold"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h1>
-        <p class="opacity-75 mb-0">每日深度思维训练</p>
+        <p class="opacity-75 mb-0">深度思维训练 (DeepSeek版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -74,7 +73,7 @@
 
 <script>
     // ==========================================
-    // ⚠️ 已修复：添加了 https:// 并去除了换行符
+    // 你的 Worker 地址 (已经填好)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -82,9 +81,8 @@
     let data = { date: new Date().toLocaleDateString(), scenario: "", qna: [], scores: [], advice: "" };
     let step = 0;
 
-    // --- 核心工具 ---
-    function getKey() { return localStorage.getItem('openai_key'); }
-    function resetKey() { localStorage.removeItem('openai_key'); location.reload(); }
+    function getKey() { return localStorage.getItem('deepseek_key'); }
+    function resetKey() { localStorage.removeItem('deepseek_key'); location.reload(); }
     
     function showLoading(show, text) {
         document.getElementById('loading').classList.toggle('hidden', !show);
@@ -96,17 +94,15 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
-    // --- AI 请求 (走 Worker 代理) ---
     async function callAI(promptText) {
         let key = getKey();
         if(!key) {
-            key = prompt("请输入你的 OpenAI API Key (sk-开头):");
+            key = prompt("请输入你的 DeepSeek API Key (sk-开头):");
             if(!key) return null;
-            localStorage.setItem('openai_key', key);
+            localStorage.setItem('deepseek_key', key);
         }
 
-        // 拼接代理地址
-        const targetEndpoint = "/v1/chat/completions"; 
+        const targetEndpoint = "/chat/completions"; 
         const baseUrl = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL;
         const finalUrl = baseUrl + targetEndpoint;
 
@@ -115,28 +111,29 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
                 body: JSON.stringify({
-                    model: "gpt-3.5-turbo-16k",
+                    // 🔴 关键修改：这里改成了 deepseek-chat
+                    model: "deepseek-chat",
                     messages: [
                         {role: "system", content: "你是一位生活哲学导师。"},
                         {role: "user", content: promptText} 
-                    ]
+                    ],
+                    stream: false
                 })
             });
             const json = await resp.json();
             if(json.error) throw new Error(json.error.message);
             return json.choices[0].message.content;
         } catch (e) {
-            alert("请求失败: " + e.message + "\n\n请检查：API Key 是否有效，或网络是否连接。");
+            alert("请求失败: " + e.message + "\n\n请检查：\n1. Worker代码里的地址是不是 api.deepseek.com\n2. Key 是否有效");
             return null;
         }
     }
 
-    // --- 业务逻辑 ---
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请先去 index.html 代码里设置 WORKER_URL！"); return; }
         
         switchView('viewScenario');
-        showLoading(true, "正在生成今日事例 (500字)...");
+        showLoading(true, "DeepSeek 正在生成事例...");
         const p = "生成一个关于生活意义与哲学的真实感人事例，500字左右。避开职场博弈，侧重个人成长。";
         const res = await callAI(p);
         if(res) {
@@ -151,11 +148,9 @@
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
-        
         document.getElementById('qCount').textContent = step;
         document.getElementById('inputAnswer').value = "";
-        showLoading(true, `正在构思第 ${step} 个追问...`);
-        
+        showLoading(true, `DeepSeek 正在构思第 ${step} 个追问...`);
         const p = `事例：${data.scenario}\n历史问答：${JSON.stringify(data.qna)}\n请围绕这7个维度：${DIMENSIONS.join(',')}，提出第${step}个深度问题。`;
         const res = await callAI(p);
         if(res) {
@@ -169,35 +164,29 @@
         const ans = document.getElementById('inputAnswer').value;
         if(ans.length < 5) return alert("请多写一点...");
         data.qna[step-1].a = ans;
-        askQuestion(); // 继续下一个问题或结束
+        askQuestion();
     }
 
     async function finishTraining() {
         switchView('viewResult');
-        showLoading(true, "正在进行严谨打分与分析...");
+        showLoading(true, "DeepSeek 正在进行分析...");
         
-        // 1. 评分
         const p1 = `对话：${JSON.stringify(data.qna)}\n请对用户在以下维度的表现打分(1-10)：${DIMENSIONS.join(',')}。每个维度必须有扣分理由。严格返回JSON数组：[{"dim":"维度","score":8,"reason":"理由"}]`;
         const res1 = await callAI(p1);
         
-        // 2. 建议
         const p2 = `基于以上表现，给出200字以上的综合提升建议。`;
         const res2 = await callAI(p2);
 
         if(res1 && res2) {
             try {
                 const jsonMatch = res1.match(/\[.*\]/s);
-                if(jsonMatch) {
-                    data.scores = JSON.parse(jsonMatch[0]);
-                } else {
-                    throw new Error("格式错误");
-                }
+                if(jsonMatch) data.scores = JSON.parse(jsonMatch[0]);
+                else throw new Error("格式错误");
                 data.advice = res2;
                 renderResult();
                 localStorage.setItem('life_log_' + data.date, JSON.stringify(data));
             } catch(e) { 
-                alert("AI 返回的评分格式有点问题，不过不影响建议阅读。"); 
-                document.getElementById('scoreList').innerHTML = "评分解析失败，请查看下方建议。";
+                document.getElementById('scoreList').innerHTML = "评分解析失败，请看下方建议。";
                 data.advice = res2;
                 document.getElementById('textAdvice').textContent = data.advice;
             }
@@ -217,13 +206,12 @@
         document.getElementById('textAdvice').textContent = data.advice;
     }
 
-    // 初始化日历
     const cal = document.getElementById('calendar');
     for(let i=0; i<28; i++) {
         const d = new Date(); d.setDate(d.getDate() - (27-i));
         const k = 'life_log_' + d.toLocaleDateString();
         const has = localStorage.getItem(k);
-        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('查看历史功能开发中，数据已保存在浏览器')">${d.getDate()}</div>`;
+        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史功能开发中')">${d.getDate()}</div>`;
     }
 </script>
 </body>

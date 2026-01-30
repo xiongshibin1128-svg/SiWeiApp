@@ -9,17 +9,28 @@
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
         body { background-color: var(--bg); font-family: 'PingFang SC', sans-serif; padding-bottom: 60px; }
-        .app-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; min-height: 80vh; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; position: relative; }
-        .content { padding: 30px; }
+        
+        .app-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; min-height: 85vh; display: flex; flex-direction: column; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; position: relative; flex-shrink: 0; }
+        .content { padding: 20px 30px; flex-grow: 1; }
+        
         .btn-main { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-size: 1.1rem; width: 100%; transition: 0.2s; }
         .btn-main:hover { opacity: 0.9; transform: scale(0.98); }
-        .scenario-box { background: #F0FFF4; border-left: 5px solid #48BB78; padding: 20px; border-radius: 8px; line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; }
+        
+        .scenario-box { background: #F0FFF4; border-left: 5px solid #48BB78; padding: 20px; border-radius: 8px; line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; color: #2d3748; }
+        
+        /* 原文引用框样式 (新功能) */
+        .ref-box { background: #edf2f7; border: 1px solid #cbd5e0; padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #4a5568; max-height: 180px; overflow-y: auto; margin-bottom: 25px; line-height: 1.6; white-space: pre-wrap; }
+        .ref-label { font-size: 0.85rem; font-weight: bold; color: #718096; margin-bottom: 5px; display: block; }
+
         .loading-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
+        
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
-        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
+        .cal-day:hover { background-color: #f7fafc; }
         .cal-day.has-data { background: #E9D8FD; color: #553C9A; font-weight: bold; border-color: #9F7AEA; }
+        
         .home-btn { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
@@ -66,9 +77,13 @@
         </div>
 
         <div id="viewQuestion" class="hidden">
+            <span class="ref-label"><i class="bi bi-book"></i> 原文对照 (可上下滑动)</span>
+            <div id="refContent" class="ref-box"></div>
+
             <h4 class="mb-3 text-primary">深度追问 <span id="qCount">1</span>/3</h4>
-            <div id="textQuestion" class="alert alert-light border shadow-sm fs-5"></div>
-            <textarea id="inputAnswer" class="form-control mb-3" rows="6" placeholder="请真诚地写下你的思考..."></textarea>
+            <div id="textQuestion" class="alert alert-light border shadow-sm fs-5 fw-bold" style="color: #2b6cb0;"></div>
+            
+            <textarea id="inputAnswer" class="form-control mb-3" rows="5" placeholder="请看着上方的事例，写下你最真实的思考..."></textarea>
             <button onclick="submitAnswer()" class="btn-main">提交回答</button>
         </div>
 
@@ -84,7 +99,7 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址 (保持不变)
+    // ⚠️ 你的 Worker 地址 (保持不变)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -124,7 +139,7 @@
                 body: JSON.stringify({
                     model: "deepseek-chat",
                     messages: [
-                        {role: "system", content: "你是一位生活哲学导师。"},
+                        {role: "system", content: "你是一位深刻的生活哲学导师。"},
                         {role: "user", content: promptText} 
                     ],
                     stream: false
@@ -134,27 +149,26 @@
             if(json.error) throw new Error(json.error.message);
             return json.choices[0].message.content;
         } catch (e) {
-            alert("请求失败: " + e.message + "\n\n请确保魔法已开启，且 Worker 地址正确。");
+            alert("连接中断: " + e.message + "\n\n请检查：\n1. 魔法是否开启\n2. Worker 地址是否正确");
             return null;
         }
     }
 
     async function startDaily() {
-        if(WORKER_URL.includes("在这里填入")) { alert("请先去 index.html 代码里设置 WORKER_URL！"); return; }
+        if(WORKER_URL.includes("在这里填入")) { alert("请先去代码里设置 WORKER_URL！"); return; }
         
-        // 获取用户选择的字数
         const wordLimit = document.getElementById('wordCountSelect').value;
-        
         switchView('viewScenario');
-        showLoading(true, `DeepSeek 正在生成事例 (约${wordLimit}字)...`);
+        showLoading(true, `DeepSeek 正在撰写事例 (${wordLimit}字)...`);
         
-        // 动态 prompt
         const p = `生成一个关于生活意义与哲学的真实感人事例，字数严格控制在 ${wordLimit} 字左右。内容要避开职场博弈，侧重个人成长与内省。`;
         
         const res = await callAI(p);
         if(res) {
             data.scenario = res;
             document.getElementById('textScenario').textContent = res;
+            // ✨ 关键一步：把生成的事例也填入答题页面的“对照框”里
+            document.getElementById('refContent').textContent = res;
         } else { switchView('viewHome'); }
         showLoading(false);
     }
@@ -166,7 +180,8 @@
         if(step > 3) { finishTraining(); return; }
         document.getElementById('qCount').textContent = step;
         document.getElementById('inputAnswer').value = "";
-        showLoading(true, `DeepSeek 正在构思第 ${step} 个追问...`);
+        showLoading(true, `DeepSeek 正在思考第 ${step} 个问题...`);
+        
         const p = `事例：${data.scenario}\n历史问答：${JSON.stringify(data.qna)}\n请围绕这7个维度：${DIMENSIONS.join(',')}，提出第${step}个深度问题。`;
         const res = await callAI(p);
         if(res) {
@@ -178,14 +193,14 @@
 
     async function submitAnswer() {
         const ans = document.getElementById('inputAnswer').value;
-        if(ans.length < 5) return alert("请多写一点...");
+        if(ans.length < 5) return alert("请多写一点，越深入越好...");
         data.qna[step-1].a = ans;
         askQuestion();
     }
 
     async function finishTraining() {
         switchView('viewResult');
-        showLoading(true, "DeepSeek 正在进行分析...");
+        showLoading(true, "DeepSeek 正在生成评估报告...");
         
         const p1 = `对话：${JSON.stringify(data.qna)}\n请对用户在以下维度的表现打分(1-10)：${DIMENSIONS.join(',')}。每个维度必须有扣分理由。严格返回JSON数组：[{"dim":"维度","score":8,"reason":"理由"}]`;
         const res1 = await callAI(p1);
@@ -202,7 +217,7 @@
                 renderResult();
                 localStorage.setItem('life_log_' + data.date, JSON.stringify(data));
             } catch(e) { 
-                document.getElementById('scoreList').innerHTML = "评分解析失败，请看下方建议。";
+                document.getElementById('scoreList').innerHTML = "AI 评分格式解析有误，请直接阅读下方建议。";
                 data.advice = res2;
                 document.getElementById('textAdvice').textContent = data.advice;
             }
@@ -227,7 +242,7 @@
         const d = new Date(); d.setDate(d.getDate() - (27-i));
         const k = 'life_log_' + d.toLocaleDateString();
         const has = localStorage.getItem(k);
-        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史复盘数据已保存在本地。')">${d.getDate()}</div>`;
+        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史记录已安全保存。')">${d.getDate()}</div>`;
     }
 </script>
 </body>

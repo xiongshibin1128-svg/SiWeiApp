@@ -35,7 +35,7 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
-        /* ✨ 动画关键帧 */
+        /* 动画关键帧 */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
@@ -47,7 +47,6 @@
         .score-card { 
             background: #fff; border: 1px solid #edf2f7; border-radius: 16px; padding: 25px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: 0.3s; 
-            /* 默认隐藏，等待动画执行 */
             opacity: 0; 
             animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
@@ -64,10 +63,23 @@
         .score-reason { font-size: 0.95rem; color: #718096; line-height: 1.6; margin-bottom: 15px; }
 
         /* 建议模块 */
-        .advice-block { background: #FAF5FF; border-radius: 12px; padding: 15px; border: 1px dashed #D6BCFA; }
-        .advice-header { font-size: 0.9rem; font-weight: bold; color: #6B46C1; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-        .advice-content { font-size: 0.95rem; color: #44337A; margin-bottom: 8px; font-weight: 500; }
-        .advice-why { font-size: 0.85rem; color: #805AD5; background: rgba(255,255,255,0.6); padding: 5px 8px; border-radius: 6px; }
+        .advice-block { background: #FAF5FF; border-radius: 12px; padding: 15px; border: 1px dashed #D6BCFA; display: flex; flex-direction: column; gap: 10px; }
+        .advice-header { font-size: 0.9rem; font-weight: bold; color: #6B46C1; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+        .advice-content { font-size: 0.95rem; color: #44337A; font-weight: 600; line-height: 1.4; }
+        
+        /* Why 模块 */
+        .advice-why { font-size: 0.85rem; color: #805AD5; background: rgba(255,255,255,0.6); padding: 8px 10px; border-radius: 6px; }
+        
+        /* 🔥 新增：Example 模块 */
+        .advice-example { 
+            font-size: 0.85rem; color: #2B6CB0; background: #EBF8FF; 
+            padding: 10px 12px; border-radius: 6px; border-left: 3px solid #4299E1;
+            margin-top: 5px;
+        }
+
+        /* 修复 undefined 的旧数据样式 */
+        .advice-block-old { background: #f7fafc; border: 1px dashed #cbd5e0; opacity: 0.8; }
+        .advice-content-old { color: #718096; font-size: 0.85rem; font-style: italic; }
 
     </style>
 </head>
@@ -135,7 +147,7 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址 (保持原样)
+    // 你的 Worker 地址
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -164,7 +176,7 @@
         if (savedData) {
             data = JSON.parse(savedData);
             document.getElementById('resultTitle').innerText = `${dateStr} 复盘记录`;
-            renderResult(); // 渲染
+            renderResult(); 
             switchView('viewResult');
         }
     }
@@ -198,7 +210,7 @@
             
             let content = json.choices[0].message.content;
             if(isJsonMode) {
-                // 清理可能存在的 markdown 标记
+                // 清理 markdown
                 content = content.replace(/```json/g, "").replace(/```/g, "").trim();
             }
             return content;
@@ -264,19 +276,20 @@
         switchView('viewResult');
         showLoading(true, "正在分析 7 个维度并生成专属建议...");
         
-        // 🔥 核心修改：一次性要求 AI 返回包含 [分数, 原因, 建议行动, 建议原理] 的大 JSON
+        // 🔥 核心修改：增加 example 字段要求
         const p = `对话记录：${JSON.stringify(data.qna)}
 请对用户在以下 7 个维度的表现进行深度评估：${DIMENSIONS.join(',')}。
 
-对于【每一个维度】，请提供以下 4 项内容：
+对于【每一个维度】，请提供以下 5 项内容：
 1. score: 1-10分
 2. reason: 评分理由 (50字以内)
 3. action: 一个具体的提升行动建议 (比如"每天记录...")
 4. why: 解释为什么这个行动有效 (背后的心理学/哲学原理)
+5. example: 一个生动的执行例子 (比如具体的场景或话术)
 
 ⚠️ 必须严格返回 JSON 数组格式，不要包含任何其他文字：
 [
-  {"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"..."},
+  {"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"例如当你..."},
   {"dim":"价值判断", "score":...} 
 ]`;
         
@@ -284,10 +297,8 @@
 
         if(res) {
             try {
-                // 尝试解析 JSON
                 data.scores = JSON.parse(res);
-                
-                renderResult(); // 渲染带动画的卡片
+                renderResult(); 
                 localStorage.setItem('life_log_' + data.date, JSON.stringify(data));
                 renderCalendar();
             } catch(e) { 
@@ -300,43 +311,58 @@
 
     function renderResult() {
         const grid = document.getElementById('scoreGrid');
-        grid.innerHTML = ''; // 清空
+        grid.innerHTML = ''; 
 
         data.scores.forEach((s, index) => {
             const icon = DIM_ICONS[s.dim] || "✨";
-            
-            // 颜色逻辑
             let colorClass = "bg-primary";
             let textClass = "text-primary";
             if(s.score >= 8) { colorClass = "bg-success"; textClass = "text-success"; }
             if(s.score < 6) { colorClass = "bg-warning"; textClass = "text-warning"; }
 
-            // 动态延迟动画 (0.1s, 0.2s, 0.3s...)
             const delay = index * 0.15; 
 
-            // 构建卡片 HTML
+            // 🔍 渲染建议、原理、例子 (兼容旧数据)
+            let adviceHtml = '';
+            if (s.action && s.action !== "undefined") {
+                // 如果有 example 就显示，没有就不显示
+                const exampleHtml = s.example ? 
+                    `<div class="advice-example"><i class="bi bi-pencil-square"></i> 栗子：${s.example}</div>` : '';
+
+                adviceHtml = `
+                <div class="advice-block">
+                    <div class="advice-header">
+                        <i class="bi bi-lightbulb-fill"></i> 专属建议
+                    </div>
+                    <div class="advice-content">${s.action}</div>
+                    
+                    <div class="advice-why">
+                        <i class="bi bi-stars"></i> 原理：${s.why}
+                    </div>
+                    
+                    ${exampleHtml}
+                </div>`;
+            } else {
+                adviceHtml = `
+                <div class="advice-block advice-block-old">
+                    <div class="advice-header"><i class="bi bi-clock-history"></i> 历史记录</div>
+                    <div class="advice-content advice-content-old">
+                        此为早期训练数据，未生成深度行动建议。<br>请开始今日的新训练以获取完整体验。
+                    </div>
+                </div>`;
+            }
+
             grid.innerHTML += `
             <div class="score-card" style="animation-delay: ${delay}s">
                 <div class="score-header">
                     <span class="score-title">${icon} ${s.dim}</span>
                     <span class="score-num ${textClass}">${s.score}</span>
                 </div>
-                
                 <div class="progress-bg">
                     <div class="progress-bar ${colorClass}" style="width: ${s.score * 10}%"></div>
                 </div>
-                
                 <div class="score-reason">${s.reason}</div>
-
-                <div class="advice-block">
-                    <div class="advice-header">
-                        <i class="bi bi-lightbulb-fill"></i> 专属建议
-                    </div>
-                    <div class="advice-content">${s.action}</div>
-                    <div class="advice-why">
-                        <i class="bi bi-stars"></i> 原理：${s.why}
-                    </div>
-                </div>
+                ${adviceHtml}
             </div>
             `;
         });

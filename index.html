@@ -73,7 +73,7 @@
         .history-time { font-weight: bold; color: #2d3748; font-size: 1.1rem; }
         .history-preview { font-size: 0.9rem; color: #718096; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
 
-        /* 🔥 美化后的思考日志框 */
+        /* 美化后的思考日志框 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
             padding: 20px; margin-bottom: 20px; position: relative;
@@ -90,7 +90,6 @@
         }
         .thinking-title { font-weight: bold; color: #2D3748; display: flex; align-items: center; gap: 8px; }
         .thinking-spinner { width: 1.2rem; height: 1.2rem; border: 3px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; animation: spin 1s linear infinite; }
-        /* 虚拟进度条 */
         .virtual-progress { height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden; width: 100px; }
         .virtual-bar { height: 100%; background: #6B46C1; width: 0%; transition: width 0.3s; animation: progressAnim 10s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -109,7 +108,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (美化流式版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (增强稳定版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -244,7 +243,6 @@
         renderResult(true);
     }
 
-    // 流式请求
     async function streamAI(promptText, onStream) {
         let key = getKey();
         if(!key) {
@@ -390,8 +388,7 @@
 [{"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"..."}, ...]`;
 
         const res = await streamAI(p, (chunk, fullText) => {
-            // 🔥 核心魔法：只显示“干净”的文字，把代码符号过滤掉
-            // 比如把 "dim": "自我觉知" 替换成 🔍 分析维度: 自我觉知
+            // 实时美化显示：把代码符号替换成表情包和标题
             let prettyText = fullText
                 .replace(/"dim":\s*"/g, "\n🔍 分析维度: ")
                 .replace(/"score":\s*/g, "📊 得分: ")
@@ -399,8 +396,8 @@
                 .replace(/"action":\s*"/g, "\n💡 建议: ")
                 .replace(/"why":\s*"/g, "\n🌟 原理: ")
                 .replace(/"example":\s*"/g, "\n🌰 栗子: ")
-                .replace(/[{"}\[\],]/g, "") // 去掉大括号中括号和逗号
-                .replace(/^\s*[\r\n]/gm, ""); // 去掉空行
+                .replace(/[{"}\[\],]/g, "") 
+                .replace(/^\s*[\r\n]/gm, "");
 
             logEl.textContent = prettyText;
             logEl.scrollTop = logEl.scrollHeight;
@@ -408,26 +405,33 @@
 
         if(res) {
             try {
-                const jsonStr = res.replace(/```json/g, "").replace(/```/g, "").trim();
-                data.scores = JSON.parse(jsonStr);
+                // 🔥 核心修复：使用正则精准提取 JSON 数组，忽略 AI 的废话
+                const jsonMatch = res.match(/\[\s*\{[\s\S]*\}\s*\]/);
                 
-                document.getElementById('thinkingArea').classList.add('hidden');
-                renderResult(false); 
-                
-                const key = 'life_log_' + data.date;
-                let history = localStorage.getItem(key);
-                let historyList = [];
-                if (history) {
-                    let parsed = JSON.parse(history);
-                    historyList = Array.isArray(parsed) ? parsed : [parsed];
+                if (jsonMatch) {
+                    data.scores = JSON.parse(jsonMatch[0]);
+                    
+                    document.getElementById('thinkingArea').classList.add('hidden');
+                    renderResult(false); 
+                    
+                    const key = 'life_log_' + data.date;
+                    let history = localStorage.getItem(key);
+                    let historyList = [];
+                    if (history) {
+                        let parsed = JSON.parse(history);
+                        historyList = Array.isArray(parsed) ? parsed : [parsed];
+                    }
+                    historyList.push(data);
+                    localStorage.setItem(key, JSON.stringify(historyList));
+                    renderCalendar();
+                } else {
+                    throw new Error("未能识别到 JSON 数据");
                 }
-                historyList.push(data);
-                localStorage.setItem(key, JSON.stringify(historyList));
-                renderCalendar();
 
             } catch(e) { 
                 console.error(e);
-                alert("生成完成，但 JSON 格式解析失败。");
+                alert("DeepSeek 返回的数据有点杂乱，请重试一下。");
+                // 即使解析失败，也不清空日志，方便用户截图反馈
             }
         }
     }

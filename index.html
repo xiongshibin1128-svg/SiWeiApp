@@ -26,9 +26,11 @@
         .hidden { display: none !important; }
         
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
-        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; position: relative;}
         .cal-day:hover { background-color: #f7fafc; }
         .cal-day.has-data { background: #E9D8FD; color: #553C9A; font-weight: bold; border-color: #9F7AEA; }
+        /* 增加一个小圆点标记有数据的日期 */
+        .cal-day.has-data::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; background: #6B46C1; border-radius: 50%; }
         
         .home-btn { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
         .home-btn:hover { background: rgba(255,255,255,0.4); }
@@ -46,7 +48,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (轻量版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (DeepSeek版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -66,6 +68,7 @@
                 <button onclick="startDaily()" class="btn btn-primary rounded-pill px-4">开始今日训练</button>
             </div>
             <div id="calendar" class="cal-grid"></div>
+            <p class="text-center text-muted small mt-3">点击紫色日期可查看历史复盘</p>
         </div>
 
         <div id="viewScenario" class="hidden">
@@ -86,11 +89,11 @@
         </div>
 
         <div id="viewResult" class="hidden">
-            <h3 class="text-center text-primary mb-4">思维评估报告</h3>
+            <h3 class="text-center text-primary mb-4" id="resultTitle">思维评估报告</h3>
             <div id="scoreList" class="mb-4"></div>
             <h5 class="fw-bold"><i class="bi bi-lightbulb"></i> 提升建议</h5>
             <div id="textAdvice" class="scenario-box" style="border-color: #805AD5; background: #FAF5FF;"></div>
-            <button onclick="location.reload()" class="btn btn-outline-primary w-100 mt-3">完成并保存</button>
+            <button onclick="location.reload()" class="btn btn-outline-primary w-100 mt-3">返回日历</button>
         </div>
     </div>
 </div>
@@ -118,6 +121,23 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
+    // ✨ 新增功能：读取历史记录并显示
+    function loadHistory(dateStr) {
+        const key = 'life_log_' + dateStr;
+        const savedData = localStorage.getItem(key);
+        
+        if (savedData) {
+            // 1. 读取数据
+            data = JSON.parse(savedData);
+            // 2. 渲染结果页面
+            renderResult();
+            // 3. 修改标题，让用户知道这是历史
+            document.getElementById('resultTitle').innerText = `${dateStr} 复盘记录`;
+            // 4. 跳转
+            switchView('viewResult');
+        }
+    }
+
     async function callAI(promptText) {
         let key = getKey();
         if(!key) {
@@ -136,7 +156,7 @@
                 body: JSON.stringify({
                     model: "deepseek-chat",
                     messages: [
-                        {role: "system", content: "你是一位温柔、有洞察力的朋友。"}, // 把角色改得更亲切
+                        {role: "system", content: "你是一位温柔、有洞察力的朋友。"},
                         {role: "user", content: promptText} 
                     ],
                     stream: false
@@ -178,20 +198,18 @@
         document.getElementById('inputAnswer').value = "";
         showLoading(true, `构思第 ${step} 个问题...`);
         
-        // 🔴 重点修改：增加了极其严格的字数和格式限制
         const p = `事例：${data.scenario}
 历史问答：${JSON.stringify(data.qna)}
 任务：基于维度【${DIMENSIONS.join(',')}】，向我提出第 ${step} 个问题。
 
-⚠️ 严格要求（必须遵守）：
+⚠️ 严格要求：
 1. 只能提 **一个** 简短的问题。
 2. 问题字数必须控制在 **40个字以内**。
-3. **禁止** 使用列点（1. 2. 3.）。
-4. **禁止** 解释为什么提这个问题。
-5. **禁止** 提供背景说明。
-6. 语气要像好朋友聊天一样轻松，不要像考试。
+3. **禁止** 使用列点。
+4. **禁止** 解释原因。
+5. 语气轻松亲切。
 
-请直接输出那个问题，不要有任何其他废话。`;
+请直接输出问题。`;
 
         const res = await callAI(p);
         if(res) {
@@ -225,7 +243,10 @@
                 else throw new Error("格式错误");
                 data.advice = res2;
                 renderResult();
+                // 保存数据
                 localStorage.setItem('life_log_' + data.date, JSON.stringify(data));
+                // 刷新日历显示
+                renderCalendar();
             } catch(e) { 
                 document.getElementById('scoreList').innerHTML = "AI 评分格式解析有误，请直接阅读下方建议。";
                 data.advice = res2;
@@ -247,13 +268,25 @@
         document.getElementById('textAdvice').textContent = data.advice;
     }
 
-    const cal = document.getElementById('calendar');
-    for(let i=0; i<28; i++) {
-        const d = new Date(); d.setDate(d.getDate() - (27-i));
-        const k = 'life_log_' + d.toLocaleDateString();
-        const has = localStorage.getItem(k);
-        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史记录已保存')">${d.getDate()}</div>`;
+    // ✨ 修复后的日历生成函数
+    function renderCalendar() {
+        const cal = document.getElementById('calendar');
+        cal.innerHTML = ''; // 清空旧日历
+        
+        for(let i=0; i<28; i++) {
+            const d = new Date(); 
+            d.setDate(d.getDate() - (27-i));
+            const dateStr = d.toLocaleDateString();
+            const k = 'life_log_' + dateStr;
+            const has = localStorage.getItem(k);
+            
+            // 重点修改：点击时调用 loadHistory 函数
+            cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) loadHistory('${dateStr}')">${d.getDate()}</div>`;
+        }
     }
+    
+    // 初始化运行
+    renderCalendar();
 </script>
 </body>
 </html>

@@ -10,7 +10,7 @@
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
         body { background-color: var(--bg); font-family: 'PingFang SC', sans-serif; padding-bottom: 60px; }
         .app-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; min-height: 80vh; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; position: relative; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; position: relative; }
         .content { padding: 30px; }
         .btn-main { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-size: 1.1rem; width: 100%; transition: 0.2s; }
         .btn-main:hover { opacity: 0.9; transform: scale(0.98); }
@@ -20,27 +20,38 @@
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
         .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; }
         .cal-day.has-data { background: #E9D8FD; color: #553C9A; font-weight: bold; border-color: #9F7AEA; }
-        .score-item { padding: 15px; border-bottom: 1px solid #eee; }
-        .score-val { float: right; font-weight: bold; }
-        .score-reason { font-size: 0.9rem; color: #666; margin-top: 5px; display: block; }
+        .home-btn { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .home-btn:hover { background: rgba(255,255,255,0.4); }
+        .settings-area { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <div id="loading" class="loading-mask hidden">
     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-    <div class="mt-3 fs-5 fw-bold text-primary" id="loadingText">DeepSeek 正在思考...</div>
+    <div class="mt-3 fs-5 fw-bold text-primary" id="loadingText">AI 正在思考...</div>
 </div>
 
 <div class="app-container">
     <div class="header">
-        <h1 class="fw-bold"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h1>
-        <p class="opacity-75 mb-0">深度思维训练 (DeepSeek版)</p>
+        <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
+        
+        <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
+        <p class="opacity-75 mb-0 small">深度思维训练 (DeepSeek版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
     <div class="content">
         <div id="viewHome">
+            <div class="settings-area">
+                <label class="form-label fw-bold small text-muted"><i class="bi bi-sliders"></i> 设置今日训练强度：</label>
+                <select id="wordCountSelect" class="form-select">
+                    <option value="200">🌱 精简版 (约200字 - 快速复盘)</option>
+                    <option value="500" selected>🌳 标准版 (约500字 - 深度思考)</option>
+                    <option value="800">🌲 深度版 (约800字 - 哲学探索)</option>
+                </select>
+            </div>
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0 fw-bold">📅 复盘日历</h4>
                 <button onclick="startDaily()" class="btn btn-primary rounded-pill px-4">开始今日训练</button>
@@ -73,7 +84,7 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址 (已经填好)
+    // 你的 Worker 地址 (保持不变)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -111,7 +122,6 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
                 body: JSON.stringify({
-                    // 🔴 关键修改：这里改成了 deepseek-chat
                     model: "deepseek-chat",
                     messages: [
                         {role: "system", content: "你是一位生活哲学导师。"},
@@ -124,7 +134,7 @@
             if(json.error) throw new Error(json.error.message);
             return json.choices[0].message.content;
         } catch (e) {
-            alert("请求失败: " + e.message + "\n\n请检查：\n1. Worker代码里的地址是不是 api.deepseek.com\n2. Key 是否有效");
+            alert("请求失败: " + e.message + "\n\n请确保魔法已开启，且 Worker 地址正确。");
             return null;
         }
     }
@@ -132,9 +142,15 @@
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请先去 index.html 代码里设置 WORKER_URL！"); return; }
         
+        // 获取用户选择的字数
+        const wordLimit = document.getElementById('wordCountSelect').value;
+        
         switchView('viewScenario');
-        showLoading(true, "DeepSeek 正在生成事例...");
-        const p = "生成一个关于生活意义与哲学的真实感人事例，500字左右。避开职场博弈，侧重个人成长。";
+        showLoading(true, `DeepSeek 正在生成事例 (约${wordLimit}字)...`);
+        
+        // 动态 prompt
+        const p = `生成一个关于生活意义与哲学的真实感人事例，字数严格控制在 ${wordLimit} 字左右。内容要避开职场博弈，侧重个人成长与内省。`;
+        
         const res = await callAI(p);
         if(res) {
             data.scenario = res;
@@ -211,7 +227,7 @@
         const d = new Date(); d.setDate(d.getDate() - (27-i));
         const k = 'life_log_' + d.toLocaleDateString();
         const has = localStorage.getItem(k);
-        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史功能开发中')">${d.getDate()}</div>`;
+        cal.innerHTML += `<div class="cal-day ${has?'has-data':''}" onclick="if(${Boolean(has)}) alert('历史复盘数据已保存在本地。')">${d.getDate()}</div>`;
     }
 </script>
 </body>

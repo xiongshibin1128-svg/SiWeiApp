@@ -37,7 +37,6 @@
 
         /* 动画 */
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        /* 光标闪烁动画 */
         @keyframes blink { 50% { opacity: 0; } }
         .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
 
@@ -74,19 +73,28 @@
         .history-time { font-weight: bold; color: #2d3748; font-size: 1.1rem; }
         .history-preview { font-size: 0.9rem; color: #718096; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
 
-        /* 🔥 新增：AI思考过程日志框 */
+        /* 🔥 美化后的思考日志框 */
+        .thinking-container {
+            background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; position: relative;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
+        }
         .thinking-log {
-            background: #2d3748; color: #48bb78; font-family: 'Courier New', Courier, monospace;
-            padding: 15px; border-radius: 8px; font-size: 0.85rem; line-height: 1.4;
-            max-height: 300px; overflow-y: auto; margin-bottom: 20px;
-            white-space: pre-wrap; border: 2px solid #4a5568;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+            color: #4A5568; font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem; line-height: 1.8;
+            max-height: 350px; overflow-y: auto; white-space: pre-wrap;
         }
-        .thinking-label {
-            font-size: 0.9rem; color: #4a5568; margin-bottom: 5px; font-weight: bold; display: flex; align-items: center; gap: 5px;
+        .thinking-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 10px;
         }
-        .thinking-spinner { width: 1rem; height: 1rem; border: 2px solid #cbd5e0; border-top-color: #6B46C1; border-radius: 50%; animation: spin 1s linear infinite; }
+        .thinking-title { font-weight: bold; color: #2D3748; display: flex; align-items: center; gap: 8px; }
+        .thinking-spinner { width: 1.2rem; height: 1.2rem; border: 3px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; animation: spin 1s linear infinite; }
+        /* 虚拟进度条 */
+        .virtual-progress { height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden; width: 100px; }
+        .virtual-bar { height: 100%; background: #6B46C1; width: 0%; transition: width 0.3s; animation: progressAnim 10s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes progressAnim { 0% { width: 0%; } 50% { width: 70%; } 100% { width: 95%; } }
 
     </style>
 </head>
@@ -101,7 +109,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (流式版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (美化流式版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -146,11 +154,17 @@
             <p id="resultSubtitle" class="text-center text-muted mb-5">基于您今天的思考，AI 为每个维度定制了专属建议</p>
             
             <div id="thinkingArea" class="hidden">
-                <div class="thinking-label">
-                    <div class="thinking-spinner"></div> DeepSeek 正在大脑中构建您的分析报告...
+                <div class="thinking-container">
+                    <div class="thinking-header">
+                        <div class="thinking-title">
+                            <div class="thinking-spinner"></div>
+                            <span>DeepSeek 正在撰写报告...</span>
+                        </div>
+                        <div class="virtual-progress"><div class="virtual-bar"></div></div>
+                    </div>
+                    <div id="thinkingLog" class="thinking-log typing-cursor"></div>
                 </div>
-                <div id="thinkingLog" class="thinking-log typing-cursor"></div>
-                <p class="text-muted text-center small">正在实时接收来自 AI 的 JSON 数据流...</p>
+                <p class="text-muted text-center small">正在实时分析 7 个维度的数据流...</p>
             </div>
 
             <div id="scoreGrid" class="score-grid hidden"></div>
@@ -163,7 +177,7 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址
+    // 你的 Worker 地址 (保持原样)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -196,7 +210,7 @@
             currentHistoryList = parsed;
             if (currentHistoryList.length === 1) {
                 data = currentHistoryList[0];
-                renderResult(true); // true 表示直接显示结果，不用思考动画
+                renderResult(true); 
             } else {
                 renderHistorySelection(dateStr);
             }
@@ -230,8 +244,7 @@
         renderResult(true);
     }
 
-    // 🔥 核心升级：流式 AI 请求函数
-    // onStream: 每收到一个字，就调用一次这个函数
+    // 流式请求
     async function streamAI(promptText, onStream) {
         let key = getKey();
         if(!key) {
@@ -253,7 +266,7 @@
                         {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
                         {role: "user", content: promptText} 
                     ],
-                    stream: true // ✨ 开启流式传输
+                    stream: true 
                 })
             });
 
@@ -268,7 +281,6 @@
                 if (done) break;
                 
                 const chunk = decoder.decode(value, { stream: true });
-                // 处理 SSE 数据包 (格式通常是 data: {...})
                 const lines = chunk.split('\n');
                 for (const line of lines) {
                     if (line.trim().startsWith('data: ')) {
@@ -279,7 +291,7 @@
                             const content = json.choices[0].delta.content || "";
                             if (content) {
                                 fullText += content;
-                                if(onStream) onStream(content, fullText); // 回调更新 UI
+                                if(onStream) onStream(content, fullText); 
                             }
                         } catch (e) { }
                     }
@@ -293,22 +305,19 @@
         }
     }
 
-    // 1. 生成事例 (流式)
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
         const wordLimit = document.getElementById('wordCountSelect').value;
         switchView('viewScenario');
         
         const el = document.getElementById('textScenario');
-        el.textContent = ""; // 清空
+        el.textContent = ""; 
         document.getElementById('btnNext1').classList.add('hidden');
 
         const p = `生成一个关于生活意义与哲学的真实感人事例，字数严格控制在 ${wordLimit} 字左右。内容要避开职场博弈，侧重个人成长与内省。`;
         
-        // ✨ 看着字一个个蹦出来
         const res = await streamAI(p, (chunk, fullText) => {
             el.textContent = fullText;
-            // 自动滚动到底部
             window.scrollTo(0, document.body.scrollHeight);
         });
 
@@ -321,13 +330,12 @@
                 scores: []
             };
             document.getElementById('refContent').textContent = res;
-            document.getElementById('btnNext1').classList.remove('hidden'); // 显示下一步按钮
+            document.getElementById('btnNext1').classList.remove('hidden'); 
         } else { switchView('viewHome'); }
     }
 
     function nextStep(view) { switchView(view); if(view === 'viewQuestion') askQuestion(); }
 
-    // 2. 提问 (流式)
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
@@ -361,10 +369,8 @@
         askQuestion();
     }
 
-    // 3. 生成报告 (流式展示思考过程)
     async function finishTraining() {
         switchView('viewResult');
-        // 显示思考日志区，隐藏结果区
         document.getElementById('thinkingArea').classList.remove('hidden');
         document.getElementById('scoreGrid').classList.add('hidden');
         document.getElementById('btnBackCal').classList.add('hidden');
@@ -383,24 +389,31 @@
 ⚠️ 必须严格返回 JSON 数组格式，不要包含任何其他文字：
 [{"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"..."}, ...]`;
 
-        // ✨ 看着 AI 写代码
         const res = await streamAI(p, (chunk, fullText) => {
-            logEl.textContent = fullText;
-            // 保持日志滚动到底部
+            // 🔥 核心魔法：只显示“干净”的文字，把代码符号过滤掉
+            // 比如把 "dim": "自我觉知" 替换成 🔍 分析维度: 自我觉知
+            let prettyText = fullText
+                .replace(/"dim":\s*"/g, "\n🔍 分析维度: ")
+                .replace(/"score":\s*/g, "📊 得分: ")
+                .replace(/"reason":\s*"/g, "\n📝 理由: ")
+                .replace(/"action":\s*"/g, "\n💡 建议: ")
+                .replace(/"why":\s*"/g, "\n🌟 原理: ")
+                .replace(/"example":\s*"/g, "\n🌰 栗子: ")
+                .replace(/[{"}\[\],]/g, "") // 去掉大括号中括号和逗号
+                .replace(/^\s*[\r\n]/gm, ""); // 去掉空行
+
+            logEl.textContent = prettyText;
             logEl.scrollTop = logEl.scrollHeight;
         });
 
         if(res) {
             try {
-                // 清理 markdown
                 const jsonStr = res.replace(/```json/g, "").replace(/```/g, "").trim();
                 data.scores = JSON.parse(jsonStr);
                 
-                // 思考结束，显示结果
                 document.getElementById('thinkingArea').classList.add('hidden');
                 renderResult(false); 
                 
-                // 保存
                 const key = 'life_log_' + data.date;
                 let history = localStorage.getItem(key);
                 let historyList = [];
@@ -414,7 +427,7 @@
 
             } catch(e) { 
                 console.error(e);
-                alert("生成完成，但 JSON 格式解析失败，请看日志区。");
+                alert("生成完成，但 JSON 格式解析失败。");
             }
         }
     }

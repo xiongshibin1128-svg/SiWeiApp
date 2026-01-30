@@ -10,12 +10,10 @@
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
         body { background-color: var(--bg); font-family: 'PingFang SC', sans-serif; padding-bottom: 60px; }
         
-        /* 容器与基础布局 */
         .app-container { max-width: 900px; margin: 20px auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; min-height: 85vh; display: flex; flex-direction: column; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; position: relative; flex-shrink: 0; }
         .content { padding: 20px 30px; flex-grow: 1; }
         
-        /* 通用组件 */
         .btn-main { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-size: 1.1rem; width: 100%; transition: 0.2s; }
         .btn-main:hover { opacity: 0.9; transform: scale(0.98); }
         .scenario-box { background: #F0FFF4; border-left: 5px solid #48BB78; padding: 20px; border-radius: 8px; line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; color: #2d3748; min-height: 100px; }
@@ -73,7 +71,7 @@
         .history-time { font-weight: bold; color: #2d3748; font-size: 1.1rem; }
         .history-preview { font-size: 0.9rem; color: #718096; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
 
-        /* 美化后的思考日志框 */
+        /* 思考日志框 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
             padding: 20px; margin-bottom: 20px; position: relative;
@@ -108,7 +106,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (增强稳定版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (强力纠错版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -175,11 +173,7 @@
 </div>
 
 <script>
-    // ==========================================
-    // 你的 Worker 地址 (保持原样)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
-    // ==========================================
-
     const DIMENSIONS = ["自我觉知", "价值判断", "情绪掌舵", "深度思考", "意义构建", "视角多元性", "知行合一"];
     const DIM_ICONS = {"自我觉知":"🪞", "价值判断":"⚖️", "情绪掌舵":"⚓", "深度思考":"🧠", "意义构建":"🌟", "视角多元性":"🔭", "知行合一":"👣"};
     
@@ -198,6 +192,28 @@
     function switchView(id) {
         ['viewHome', 'viewScenario', 'viewQuestion', 'viewResult'].forEach(v => document.getElementById(v).classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
+    }
+
+    // 🔥 核心升级：强力 JSON 清洗函数
+    function safeJSONParse(str) {
+        if(!str) return null;
+        try {
+            // 1. 尝试寻找 [ ] 包裹的内容，忽略开头结尾的废话
+            const start = str.indexOf('[');
+            const end = str.lastIndexOf(']');
+            if (start !== -1 && end !== -1) {
+                let jsonStr = str.substring(start, end + 1);
+                // 2. 去除 Markdown 标记 (```json)
+                jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '');
+                // 3. 修复常见的 JSON 格式错误 (如末尾逗号)
+                jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+                return JSON.parse(jsonStr);
+            }
+            return null;
+        } catch (e) {
+            console.error("JSON Fix failed:", e);
+            return null;
+        }
     }
 
     function loadHistory(dateStr) {
@@ -388,7 +404,6 @@
 [{"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"..."}, ...]`;
 
         const res = await streamAI(p, (chunk, fullText) => {
-            // 实时美化显示：把代码符号替换成表情包和标题
             let prettyText = fullText
                 .replace(/"dim":\s*"/g, "\n🔍 分析维度: ")
                 .replace(/"score":\s*/g, "📊 得分: ")
@@ -404,34 +419,27 @@
         });
 
         if(res) {
-            try {
-                // 🔥 核心修复：使用正则精准提取 JSON 数组，忽略 AI 的废话
-                const jsonMatch = res.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            // 🔥 使用 safeJSONParse 替代直接 JSON.parse
+            const cleanData = safeJSONParse(res);
+            
+            if(cleanData) {
+                data.scores = cleanData;
+                document.getElementById('thinkingArea').classList.add('hidden');
+                renderResult(false); 
                 
-                if (jsonMatch) {
-                    data.scores = JSON.parse(jsonMatch[0]);
-                    
-                    document.getElementById('thinkingArea').classList.add('hidden');
-                    renderResult(false); 
-                    
-                    const key = 'life_log_' + data.date;
-                    let history = localStorage.getItem(key);
-                    let historyList = [];
-                    if (history) {
-                        let parsed = JSON.parse(history);
-                        historyList = Array.isArray(parsed) ? parsed : [parsed];
-                    }
-                    historyList.push(data);
-                    localStorage.setItem(key, JSON.stringify(historyList));
-                    renderCalendar();
-                } else {
-                    throw new Error("未能识别到 JSON 数据");
+                const key = 'life_log_' + data.date;
+                let history = localStorage.getItem(key);
+                let historyList = [];
+                if (history) {
+                    let parsed = JSON.parse(history);
+                    historyList = Array.isArray(parsed) ? parsed : [parsed];
                 }
-
-            } catch(e) { 
-                console.error(e);
-                alert("DeepSeek 返回的数据有点杂乱，请重试一下。");
-                // 即使解析失败，也不清空日志，方便用户截图反馈
+                historyList.push(data);
+                localStorage.setItem(key, JSON.stringify(historyList));
+                renderCalendar();
+            } else { 
+                alert("DeepSeek 返回数据格式有误，请刷新重试。\n错误提示：JSON解析失败");
+                // 即使失败，也不清除日志，方便你看到底错哪儿了
             }
         }
     }

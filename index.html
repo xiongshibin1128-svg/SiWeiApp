@@ -35,7 +35,6 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
-        /* 🔥 优化后的思考状态区 (不再显示代码) */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
             padding: 40px 20px; margin-bottom: 20px; text-align: center;
@@ -59,7 +58,6 @@
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 报告卡片 */
         .report-card {
             border-radius: 16px; padding: 25px; margin-bottom: 25px;
             background: #fff; border: 1px solid #eee;
@@ -100,6 +98,9 @@
         .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
+        
+        /* 🔥 兜底显示的样式 */
+        .fallback-box { background: #fff3cd; color: #856404; padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -113,7 +114,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (专家评估版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (防丢版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -182,6 +183,16 @@
             </div>
 
             <div id="reportCardsArea" class="hidden"></div>
+            
+            <div id="fallbackArea" class="hidden">
+                <div class="fallback-box">
+                    <h5><i class="bi bi-exclamation-circle-fill"></i> 自动排版受阻</h5>
+                    <p class="small mb-2">网络波动或格式原因导致图表生成失败，但 AI 已经完成了分析。您可以直接阅读下方的原始报告：</p>
+                    <hr>
+                    <div id="fallbackContent" style="white-space: pre-wrap; font-size: 0.95rem; color: #333;"></div>
+                </div>
+            </div>
+
             <div id="historySelectArea" class="history-list hidden"></div>
             
             <button id="btnBackCal" onclick="location.reload()" class="btn btn-outline-primary w-100 mt-5 py-3 hidden">返回日历</button>
@@ -190,7 +201,11 @@
 </div>
 
 <script>
+    // ==========================================
+    // 你的 Worker 地址 (保持原样)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
+    // ==========================================
+
     const EXPERT_PROMPT = `
 # 你的角色 
 你是专业的思维训练题目设计专家。
@@ -260,6 +275,7 @@
     function renderHistorySelection(dateStr) {
         document.getElementById('resultTitle').innerText = `${dateStr} 复盘记录`;
         document.getElementById('reportCardsArea').innerHTML = '';
+        document.getElementById('fallbackArea').classList.add('hidden');
         document.getElementById('thinkingArea').classList.add('hidden');
         document.getElementById('historySelectArea').classList.remove('hidden');
         document.getElementById('btnBackCal').classList.remove('hidden');
@@ -298,7 +314,9 @@
                 body: JSON.stringify({
                     model: "deepseek-chat",
                     messages: messages,
-                    stream: true 
+                    stream: true,
+                    // 🔥 核心升级：尝试开启 JSON 模式 (增强稳定性)
+                    response_format: { type: 'json_object' }
                 })
             });
             const reader = response.body.getReader();
@@ -401,7 +419,8 @@
     async function finishTraining() {
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
-        document.getElementById('reportCardsArea').innerHTML = ''; 
+        document.getElementById('reportCardsArea').classList.add('hidden');
+        document.getElementById('fallbackArea').classList.add('hidden'); // 重置
         document.getElementById('btnBackCal').classList.add('hidden');
         
         // 状态更新元素
@@ -424,14 +443,16 @@
 }
 确保 JSON 格式标准，没有多余逗号。`;
 
-        // 🔥 修复点：这里不再更新文字日志，而是更新进度条和状态文字
+        let rawRes = "";
+
         const res = await streamAI([
             {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
             {role: "user", content: p}
         ], (chunk, fullText) => {
-            // 假装根据长度更新进度条，让用户感觉在动
+            rawRes = fullText; // 实时保存原始文本
+            // 假装根据长度更新进度条
             const len = fullText.length;
-            let percent = Math.min(len / 1500 * 100, 95); // 假设1500字是满
+            let percent = Math.min(len / 1500 * 100, 95); 
             barEl.style.width = percent + '%';
 
             if(len < 100) { statusEl.textContent = "正在启动思维分析..."; subEl.textContent = "连接 DeepSeek 核心大脑..."; }
@@ -445,32 +466,44 @@
             statusEl.textContent = "生成完毕！";
             
             const cleanData = safeJSONParse(res);
+            
+            // 🔥 核心修复：如果解析成功，显示卡片；如果失败，显示兜底文字
             if(cleanData) {
                 data.report = cleanData;
+                saveData(); // 保存结构化数据
                 setTimeout(() => {
                     document.getElementById('thinkingArea').classList.add('hidden');
                     renderCards(cleanData);
-                }, 800); // 稍微停顿一下展示100%
-                
-                const key = 'life_log_' + data.date;
-                let history = localStorage.getItem(key);
-                let historyList = [];
-                if (history) {
-                    let parsed = JSON.parse(history);
-                    historyList = Array.isArray(parsed) ? parsed : [parsed];
-                }
-                historyList.push(data);
-                localStorage.setItem(key, JSON.stringify(historyList));
-                renderCalendar();
+                }, 800);
             } else { 
-                alert("报告生成格式有误，请刷新重试（错误已记录在控制台）。");
+                // 兜底模式：显示原始文本
+                document.getElementById('thinkingArea').classList.add('hidden');
+                document.getElementById('fallbackArea').classList.remove('hidden');
+                document.getElementById('fallbackContent').textContent = rawRes;
+                document.getElementById('btnBackCal').classList.remove('hidden');
+                
+                // 即使解析失败，也保存一份原始文本，以免丢失
+                data.report = { raw: rawRes };
+                saveData();
             }
         }
     }
 
+    function saveData() {
+        const key = 'life_log_' + data.date;
+        let history = localStorage.getItem(key);
+        let historyList = [];
+        if (history) {
+            let parsed = JSON.parse(history);
+            historyList = Array.isArray(parsed) ? parsed : [parsed];
+        }
+        historyList.push(data);
+        localStorage.setItem(key, JSON.stringify(historyList));
+        renderCalendar();
+    }
+
     function renderCards(report) {
         const area = document.getElementById('reportCardsArea');
-        // 🔥 关键修复：确保显示出来
         area.classList.remove('hidden');
         area.innerHTML = '';
         document.getElementById('btnBackCal').classList.remove('hidden');
@@ -602,12 +635,22 @@
     function renderResult(isHistoryMode) {
         if(isHistoryMode) document.getElementById('thinkingArea').classList.add('hidden');
         
+        // 渲染新版结构化报告
         if (data.report && data.report.overview) {
             renderCards(data.report);
-        } else if (data.scores) {
+        } 
+        // 渲染兜底文本（针对保存的原始文本）
+        else if (data.report && data.report.raw) {
+            document.getElementById('reportCardsArea').classList.add('hidden');
+            document.getElementById('fallbackArea').classList.remove('hidden');
+            document.getElementById('fallbackContent').textContent = data.report.raw;
+            document.getElementById('btnBackCal').classList.remove('hidden');
+        }
+        // 兼容最古老的旧数据
+        else if (data.scores) {
             const area = document.getElementById('reportCardsArea');
             area.classList.remove('hidden');
-            area.innerHTML = '<div class="alert alert-warning">此为旧版数据，缺少八维评估详情。</div>';
+            area.innerHTML = '<div class="alert alert-warning">此为早期数据，无法显示新版图表。</div>';
             document.getElementById('btnBackCal').classList.remove('hidden');
         }
     }

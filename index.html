@@ -16,13 +16,27 @@
         
         .btn-main { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-size: 1.1rem; width: 100%; transition: 0.2s; }
         .btn-main:hover { opacity: 0.9; transform: scale(0.98); }
-        .scenario-box { background: #F0FFF4; border-left: 5px solid #48BB78; padding: 20px; border-radius: 8px; line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; color: #2d3748; min-height: 100px; }
+        
+        /* 优化了事例框的样式，更适合阅读 Markdown 风格的文字 */
+        .scenario-box { 
+            background: #fff; 
+            border: 2px solid #E2E8F0; 
+            padding: 25px; 
+            border-radius: 12px; 
+            line-height: 1.8; 
+            margin-bottom: 20px; 
+            white-space: pre-wrap; 
+            color: #2d3748; 
+            min-height: 100px;
+            font-size: 1.05rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
         .ref-box { background: #edf2f7; border: 1px solid #cbd5e0; padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #4a5568; max-height: 180px; overflow-y: auto; margin-bottom: 25px; line-height: 1.6; white-space: pre-wrap; }
         .ref-label { font-size: 0.85rem; font-weight: bold; color: #718096; margin-bottom: 5px; display: block; }
         .loading-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
         
-        /* 日历 */
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
         .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; position: relative;}
         .cal-day:hover { background-color: #f7fafc; }
@@ -33,12 +47,10 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
-        /* 动画 */
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes blink { 50% { opacity: 0; } }
         .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
 
-        /* 评分卡片 */
         .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
         .score-card { 
             background: #fff; border: 1px solid #edf2f7; border-radius: 16px; padding: 25px; 
@@ -53,7 +65,6 @@
         .progress-bar { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
         .score-reason { font-size: 0.95rem; color: #718096; line-height: 1.6; margin-bottom: 15px; }
 
-        /* 建议模块 */
         .advice-block { background: #FAF5FF; border-radius: 12px; padding: 15px; border: 1px dashed #D6BCFA; display: flex; flex-direction: column; gap: 10px; }
         .advice-header { font-size: 0.9rem; font-weight: bold; color: #6B46C1; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
         .advice-content { font-size: 0.95rem; color: #44337A; font-weight: 600; line-height: 1.4; }
@@ -71,7 +82,6 @@
         .history-time { font-weight: bold; color: #2d3748; font-size: 1.1rem; }
         .history-preview { font-size: 0.9rem; color: #718096; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
 
-        /* 思考日志框 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
             padding: 20px; margin-bottom: 20px; position: relative;
@@ -106,7 +116,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (强力纠错版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (专家题库版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -130,19 +140,19 @@
         </div>
 
         <div id="viewScenario" class="hidden">
-            <h4 class="mb-3 text-primary">今日生活事例</h4>
+            <h4 class="mb-3 text-primary">今日思维选题</h4>
             <div id="textScenario" class="scenario-box typing-cursor"></div>
-            <button id="btnNext1" onclick="nextStep('viewQuestion')" class="btn-main hidden">开始深度追问</button>
+            <button id="btnNext1" onclick="nextStep('viewQuestion')" class="btn-main hidden">开始第一问</button>
         </div>
 
         <div id="viewQuestion" class="hidden">
-            <span class="ref-label"><i class="bi bi-book"></i> 原文对照</span>
+            <span class="ref-label"><i class="bi bi-book"></i> 背景回顾</span>
             <div id="refContent" class="ref-box"></div>
 
-            <h4 class="mb-3 text-primary">深度追问 <span id="qCount">1</span>/3</h4>
+            <h4 class="mb-3 text-primary">深度思考 <span id="qCount">1</span>/3</h4>
             <div id="textQuestion" class="alert alert-light border shadow-sm fs-5 fw-bold typing-cursor" style="color: #2b6cb0;"></div>
             
-            <textarea id="inputAnswer" class="form-control mb-3" rows="5" placeholder="不用长篇大论，写下你最直观的感受..."></textarea>
+            <textarea id="inputAnswer" class="form-control mb-3" rows="5" placeholder="请基于上述背景，写下你的深度思考..."></textarea>
             <button id="btnSubmit" onclick="submitAnswer()" class="btn-main">提交回答</button>
         </div>
 
@@ -155,7 +165,7 @@
                     <div class="thinking-header">
                         <div class="thinking-title">
                             <div class="thinking-spinner"></div>
-                            <span>DeepSeek 正在撰写报告...</span>
+                            <span>DeepSeek 专家正在复盘您的回答...</span>
                         </div>
                         <div class="virtual-progress"><div class="virtual-bar"></div></div>
                     </div>
@@ -173,7 +183,25 @@
 </div>
 
 <script>
+    // ==========================================
+    // 你的 Worker 地址 (保持原样)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
+    // ==========================================
+
+    // 🔥 核心升级：植入用户提供的“专家提示词”逻辑
+    const EXPERT_PROMPT = `
+# 你的角色 
+你是专业的思维训练题目设计专家，擅长将热点话题事件转化为有趣且具有深度思考价值的思维训练题目。 
+
+# 设计要求 
+内容要包含：
+1. **标题**：简洁有力，引入自媒体风格，激发好奇心。
+2. **背景描述**：提供充分客观的多维度信息（事实、数据、观点），风格有趣不严肃，遵循“滑梯效应”，语言简明，条理分明。
+3. **问题设计**：3个递进式开放性问题，从表象深入本质。问题要与常识相符，拒绝宏大抽象，要与用户生活工作相关。
+
+请严格使用 Markdown 格式（使用 emoji）。
+`;
+
     const DIMENSIONS = ["自我觉知", "价值判断", "情绪掌舵", "深度思考", "意义构建", "视角多元性", "知行合一"];
     const DIM_ICONS = {"自我觉知":"🪞", "价值判断":"⚖️", "情绪掌舵":"⚓", "深度思考":"🧠", "意义构建":"🌟", "视角多元性":"🔭", "知行合一":"👣"};
     
@@ -194,18 +222,14 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
-    // 🔥 核心升级：强力 JSON 清洗函数
     function safeJSONParse(str) {
         if(!str) return null;
         try {
-            // 1. 尝试寻找 [ ] 包裹的内容，忽略开头结尾的废话
             const start = str.indexOf('[');
             const end = str.lastIndexOf(']');
             if (start !== -1 && end !== -1) {
                 let jsonStr = str.substring(start, end + 1);
-                // 2. 去除 Markdown 标记 (```json)
                 jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '');
-                // 3. 修复常见的 JSON 格式错误 (如末尾逗号)
                 jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
                 return JSON.parse(jsonStr);
             }
@@ -244,7 +268,7 @@
         const listArea = document.getElementById('historySelectArea');
         listArea.innerHTML = currentHistoryList.map((item, index) => {
             const timeLabel = item.time || `记录 ${index + 1}`;
-            const preview = item.scenario ? item.scenario.substring(0, 20) + '...' : '点击查看';
+            const preview = item.scenario ? item.scenario.substring(0, 30) + '...' : '点击查看';
             return `
             <div class="history-item" onclick="selectHistoryItem(${index})">
                 <div><div class="history-time"><i class="bi bi-clock-fill text-primary"></i> ${timeLabel}</div><div class="history-preview">${preview}</div></div>
@@ -259,7 +283,7 @@
         renderResult(true);
     }
 
-    async function streamAI(promptText, onStream) {
+    async function streamAI(messages, onStream) {
         let key = getKey();
         if(!key) {
             key = prompt("请输入 DeepSeek API Key:");
@@ -276,10 +300,7 @@
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
                 body: JSON.stringify({
                     model: "deepseek-chat",
-                    messages: [
-                        {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
-                        {role: "user", content: promptText} 
-                    ],
+                    messages: messages,
                     stream: true 
                 })
             });
@@ -319,18 +340,23 @@
         }
     }
 
+    // 1. 生成事例 (使用专家提示词)
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
-        const wordLimit = document.getElementById('wordCountSelect').value;
         switchView('viewScenario');
         
         const el = document.getElementById('textScenario');
         el.textContent = ""; 
         document.getElementById('btnNext1').classList.add('hidden');
 
-        const p = `生成一个关于生活意义与哲学的真实感人事例，字数严格控制在 ${wordLimit} 字左右。内容要避开职场博弈，侧重个人成长与内省。`;
+        // 🔥 关键修改：指令只要求生成【标题】和【背景描述】
+        const systemMsg = EXPERT_PROMPT;
+        const userMsg = "请随机搜寻一个关于个人成长、社会现象或生活哲学的热点话题（如“躺平”、“内卷”、“极简生活”、“AI焦虑”等），严格按照【内容要求】生成【标题】和【背景描述】。注意：暂时**不要**生成“问题设计”部分，只给背景材料。";
         
-        const res = await streamAI(p, (chunk, fullText) => {
+        const res = await streamAI([
+            {role: "system", content: systemMsg},
+            {role: "user", content: userMsg}
+        ], (chunk, fullText) => {
             el.textContent = fullText;
             window.scrollTo(0, document.body.scrollHeight);
         });
@@ -350,6 +376,7 @@
 
     function nextStep(view) { switchView(view); if(view === 'viewQuestion') askQuestion(); }
 
+    // 2. 提问 (使用专家提示词生成特定问题)
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
@@ -358,15 +385,27 @@
         document.getElementById('inputAnswer').value = "";
         
         const el = document.getElementById('textQuestion');
-        el.textContent = "DeepSeek 正在思考问题...";
+        el.textContent = "专家正在出题...";
         document.getElementById('btnSubmit').disabled = true;
 
-        const p = `事例：${data.scenario}
-历史问答：${JSON.stringify(data.qna)}
-任务：基于维度【${DIMENSIONS.join(',')}】，向我提出第 ${step} 个问题。
-⚠️ 严格要求：1.只能提一个简短问题。2.字数40字以内。3.禁止列点和解释。4.语气亲切。请直接输出问题。`;
+        // 🔥 关键修改：利用提示词要求生成特定的第 N 个问题
+        const userMsg = `背景材料：
+${data.scenario}
 
-        const res = await streamAI(p, (chunk, fullText) => {
+用户历史问答（供参考，不要重复）：
+${JSON.stringify(data.qna)}
+
+当前任务：
+请完全基于上述背景材料，按照【设计要求】中的【问题设计】标准，仅仅提出第 ${step} 个递进式开放性问题。
+要求：
+1. 这是一个“${step === 1 ? '表象' : (step === 2 ? '本质' : '原理')}”层面的问题。
+2. 问题必须有趣、与生活相关，拒绝宏大抽象。
+3. 只输出问题本身，不要输出“问题1：”这种前缀。`;
+
+        const res = await streamAI([
+            {role: "system", content: EXPERT_PROMPT},
+            {role: "user", content: userMsg}
+        ], (chunk, fullText) => {
             el.textContent = fullText;
         });
 
@@ -383,6 +422,7 @@
         askQuestion();
     }
 
+    // 3. 结果评估 (保持之前的逻辑，因为这是“专家”的阅卷环节)
     async function finishTraining() {
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
@@ -403,7 +443,10 @@
 ⚠️ 必须严格返回 JSON 数组格式，不要包含任何其他文字：
 [{"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"..."}, ...]`;
 
-        const res = await streamAI(p, (chunk, fullText) => {
+        const res = await streamAI([
+            {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
+            {role: "user", content: p}
+        ], (chunk, fullText) => {
             let prettyText = fullText
                 .replace(/"dim":\s*"/g, "\n🔍 分析维度: ")
                 .replace(/"score":\s*/g, "📊 得分: ")
@@ -419,7 +462,6 @@
         });
 
         if(res) {
-            // 🔥 使用 safeJSONParse 替代直接 JSON.parse
             const cleanData = safeJSONParse(res);
             
             if(cleanData) {
@@ -439,7 +481,6 @@
                 renderCalendar();
             } else { 
                 alert("DeepSeek 返回数据格式有误，请刷新重试。\n错误提示：JSON解析失败");
-                // 即使失败，也不清除日志，方便你看到底错哪儿了
             }
         }
     }

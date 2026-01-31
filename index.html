@@ -2,18 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>生命之书：深度思维训练</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>
+        // 初始化手机调试台
+        var vConsole = new VConsole();
+    </script>
 
-<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-<script>
-  // 初始化 vConsole
-  var vConsole = new VConsole();
-  console.log('手机调试模式已启动！');
-</script>
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
         body { background-color: var(--bg); font-family: 'PingFang SC', sans-serif; padding-bottom: 60px; }
@@ -41,6 +40,7 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
+        /* 思考状态区 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
             padding: 40px 20px; margin-bottom: 20px; text-align: center;
@@ -64,6 +64,7 @@
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* 报告卡片 */
         .report-card {
             border-radius: 16px; padding: 25px; margin-bottom: 25px;
             background: #fff; border: 1px solid #eee;
@@ -120,7 +121,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (防丢版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (完全体)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -320,9 +321,7 @@
                 body: JSON.stringify({
                     model: "deepseek-chat",
                     messages: messages,
-                    stream: true,
-                    // 🔥 核心升级：尝试开启 JSON 模式 (增强稳定性)
-                    response_format: { type: 'json_object' }
+                    stream: true
                 })
             });
             const reader = response.body.getReader();
@@ -473,22 +472,21 @@
             
             const cleanData = safeJSONParse(res);
             
-            // 🔥 核心修复：如果解析成功，显示卡片；如果失败，显示兜底文字
             if(cleanData) {
                 data.report = cleanData;
-                saveData(); // 保存结构化数据
+                saveData(); // 保存
                 setTimeout(() => {
                     document.getElementById('thinkingArea').classList.add('hidden');
                     renderCards(cleanData);
                 }, 800);
             } else { 
-                // 兜底模式：显示原始文本
+                // 🔥 兜底模式：显示原始文本
+                console.warn("JSON解析失败，启动兜底显示");
                 document.getElementById('thinkingArea').classList.add('hidden');
                 document.getElementById('fallbackArea').classList.remove('hidden');
                 document.getElementById('fallbackContent').textContent = rawRes;
                 document.getElementById('btnBackCal').classList.remove('hidden');
                 
-                // 即使解析失败，也保存一份原始文本，以免丢失
                 data.report = { raw: rawRes };
                 saveData();
             }
@@ -641,19 +639,14 @@
     function renderResult(isHistoryMode) {
         if(isHistoryMode) document.getElementById('thinkingArea').classList.add('hidden');
         
-        // 渲染新版结构化报告
         if (data.report && data.report.overview) {
             renderCards(data.report);
-        } 
-        // 渲染兜底文本（针对保存的原始文本）
-        else if (data.report && data.report.raw) {
+        } else if (data.report && data.report.raw) {
             document.getElementById('reportCardsArea').classList.add('hidden');
             document.getElementById('fallbackArea').classList.remove('hidden');
             document.getElementById('fallbackContent').textContent = data.report.raw;
             document.getElementById('btnBackCal').classList.remove('hidden');
-        }
-        // 兼容最古老的旧数据
-        else if (data.scores) {
+        } else if (data.scores) {
             const area = document.getElementById('reportCardsArea');
             area.classList.remove('hidden');
             area.innerHTML = '<div class="alert alert-warning">此为早期数据，无法显示新版图表。</div>';

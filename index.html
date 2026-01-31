@@ -98,7 +98,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (灵感菜单版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (完美修复版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -207,14 +207,18 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
+    // 🔥 升级版清洗函数：解决JSON解析失败
     function safeJSONParse(str) {
         if(!str) return null;
         try {
+            // 1. 去除代码块
             str = str.replace(/```json/g, '').replace(/```/g, '');
+            // 2. 截取 {} 范围
             const start = str.indexOf('{');
             const end = str.lastIndexOf('}');
             if (start !== -1 && end !== -1) {
                 let jsonStr = str.substring(start, end + 1);
+                // 3. 去除末尾逗号（DeepSeek 常见毛病）
                 jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
                 return JSON.parse(jsonStr);
             }
@@ -316,11 +320,10 @@
         }
     }
 
-    // 1. 生成事例 (支持赛道选择)
+    // 1. 生成事例
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
         
-        // 获取用户选择
         const topic = document.getElementById('topicSelect').value;
         const wordLimit = document.getElementById('wordCountSelect').value;
         
@@ -332,7 +335,6 @@
         const systemMsg = EXPERT_PROMPT;
         let userMsg = "";
 
-        // 🔥 核心逻辑：根据选择生成 Prompt
         if (topic === "random") {
             userMsg = `请随机搜寻一个关于个人成长、社会现象或生活哲学的热点话题（如“AI焦虑”、“躺平”、“极简”、“内耗”等），严格按照【内容要求】生成【标题】和【背景描述】。字数约${wordLimit}。注意：暂时**不要**生成“问题设计”。`;
         } else {
@@ -442,6 +444,8 @@
 
     function renderCards(report) {
         const area = document.getElementById('reportCardsArea');
+        // 🔥 关键修复：移除隐藏状态，让内容显示出来！
+        area.classList.remove('hidden'); 
         area.innerHTML = '';
         document.getElementById('btnBackCal').classList.remove('hidden');
 
@@ -571,10 +575,14 @@
     
     function renderResult(isHistoryMode) {
         if(isHistoryMode) document.getElementById('thinkingArea').classList.add('hidden');
+        
         if (data.report && data.report.overview) {
             renderCards(data.report);
         } else if (data.scores) {
-            document.getElementById('reportCardsArea').innerHTML = '<div class="alert alert-warning">此为旧版数据，缺少八维评估详情。</div>';
+            // 旧数据兼容
+            const area = document.getElementById('reportCardsArea');
+            area.classList.remove('hidden');
+            area.innerHTML = '<div class="alert alert-warning">此为旧版数据，缺少八维评估详情。</div>';
             document.getElementById('btnBackCal').classList.remove('hidden');
         }
     }

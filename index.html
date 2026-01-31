@@ -6,6 +6,8 @@
     <title>生命之书：深度思维训练</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
         body { background-color: var(--bg); font-family: 'PingFang SC', sans-serif; padding-bottom: 60px; }
@@ -17,92 +19,87 @@
         .btn-main { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-size: 1.1rem; width: 100%; transition: 0.2s; }
         .btn-main:hover { opacity: 0.9; transform: scale(0.98); }
         
-        /* 优化了事例框的样式，更适合阅读 Markdown 风格的文字 */
-        .scenario-box { 
-            background: #fff; 
-            border: 2px solid #E2E8F0; 
-            padding: 25px; 
-            border-radius: 12px; 
-            line-height: 1.8; 
-            margin-bottom: 20px; 
-            white-space: pre-wrap; 
-            color: #2d3748; 
-            min-height: 100px;
-            font-size: 1.05rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        /* 思考过程日志框 */
+        .thinking-container {
+            background: #2d3748; color: #48bb78; font-family: 'Courier New', Courier, monospace;
+            padding: 15px; border-radius: 8px; font-size: 0.85rem; line-height: 1.4;
+            max-height: 300px; overflow-y: auto; margin-bottom: 20px;
+            white-space: pre-wrap; border: 2px solid #4a5568;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
         }
+        .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
+        @keyframes blink { 50% { opacity: 0; } }
 
+        /* 通用卡片样式 */
+        .report-card {
+            border-radius: 16px; padding: 25px; margin-bottom: 25px;
+            background: #fff; border: 1px solid #eee;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+        /* 1. 评估雷达图卡片 */
+        .card-radar { border-top: 5px solid #63B3ED; }
+        .card-radar .card-title { color: #3182CE; }
+
+        /* 2. 思考总览卡片 */
+        .card-overview { border-top: 5px solid #4FD1C5; background: #E6FFFA; border-color: #B2F5EA; }
+        .card-overview .card-title { color: #285E61; }
+        
+        /* 3. 思考亮点卡片 (金色) */
+        .card-highlight { border-top: 5px solid #F6E05E; background: #FFFFF0; border-color: #FAF089; }
+        .card-highlight .card-title { color: #D69E2E; }
+        .highlight-item { margin-bottom: 12px; }
+        .highlight-head { color: #B7791F; font-weight: bold; font-size: 0.95rem; }
+
+        /* 4. 思考局限性卡片 (粉色) */
+        .card-limit { border-top: 5px solid #F687B3; background: #FFF5F7; border-color: #FED7E2; }
+        .card-limit .card-title { color: #B83280; }
+        .limit-item { margin-bottom: 15px; border-left: 3px solid #F687B3; padding-left: 10px; }
+        .limit-tip { background: rgba(255,255,255,0.6); padding: 5px 8px; border-radius: 6px; font-size: 0.85rem; color: #97266D; margin-top: 5px; display: inline-block;}
+
+        /* 5. 提升建议卡片 (绿色) */
+        .card-suggest { border-top: 5px solid #68D391; background: #F0FFF4; border-color: #9AE6B4; }
+        .card-suggest .card-title { color: #2F855A; }
+        .suggest-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed #68D391; }
+
+        /* 6. 知识迁移卡片 (紫色) */
+        .card-transfer { border-top: 5px solid #9F7AEA; background: #FAF5FF; border-color: #E9D8FD; }
+        .card-transfer .card-title { color: #6B46C1; }
+        .transfer-tag { background: #E9D8FD; color: #553C9A; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: inline-block; }
+
+        /* 7. 思考奖励卡片 (奖杯金) */
+        .card-reward { background: linear-gradient(135deg, #FEFCBF 0%, #F6E05E 100%); border: none; color: #744210; text-align: center; }
+        .reward-badge { font-size: 3rem; margin-bottom: 10px; display: block; }
+        .reward-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 5px; }
+        .reward-score-box { background: rgba(255,255,255,0.5); padding: 10px; border-radius: 12px; margin-top: 15px; font-size: 0.9rem; text-align: left; }
+        .reward-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0,0,0,0.1); padding: 5px 0; }
+
+        /* 8. 思考金句卡片 */
+        .card-quote { background: #2D3748; color: white; border-top: 5px solid #A0AEC0; text-align: center; font-style: italic; }
+        .quote-text { font-size: 1.2rem; line-height: 1.6; font-family: 'Times New Roman', serif; }
+
+        /* 其他基础样式 */
+        .scenario-box { background: #fff; border: 2px solid #E2E8F0; padding: 25px; border-radius: 12px; line-height: 1.8; margin-bottom: 20px; white-space: pre-wrap; color: #2d3748; min-height: 100px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
         .ref-box { background: #edf2f7; border: 1px solid #cbd5e0; padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #4a5568; max-height: 180px; overflow-y: auto; margin-bottom: 25px; line-height: 1.6; white-space: pre-wrap; }
-        .ref-label { font-size: 0.85rem; font-weight: bold; color: #718096; margin-bottom: 5px; display: block; }
         .loading-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
-        
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
         .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; position: relative;}
         .cal-day:hover { background-color: #f7fafc; }
         .cal-day.has-data { background: #E9D8FD; color: #553C9A; font-weight: bold; border-color: #9F7AEA; }
         .cal-day.has-data::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; background: #6B46C1; border-radius: 50%; }
-        
         .home-btn { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
-
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes blink { 50% { opacity: 0; } }
-        .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
-
-        .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
-        .score-card { 
-            background: #fff; border: 1px solid #edf2f7; border-radius: 16px; padding: 25px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: 0.3s; 
-            opacity: 0; animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-        .score-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); border-color: #cbd5e0; }
-        .score-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .score-title { font-weight: bold; font-size: 1.1rem; color: #2d3748; display: flex; align-items: center; gap: 8px; }
-        .score-num { font-weight: 800; font-size: 1.5rem; }
-        .progress-bg { height: 8px; background: #edf2f7; border-radius: 4px; overflow: hidden; margin-bottom: 15px; }
-        .progress-bar { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
-        .score-reason { font-size: 0.95rem; color: #718096; line-height: 1.6; margin-bottom: 15px; }
-
-        .advice-block { background: #FAF5FF; border-radius: 12px; padding: 15px; border: 1px dashed #D6BCFA; display: flex; flex-direction: column; gap: 10px; }
-        .advice-header { font-size: 0.9rem; font-weight: bold; color: #6B46C1; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
-        .advice-content { font-size: 0.95rem; color: #44337A; font-weight: 600; line-height: 1.4; }
-        .advice-why { font-size: 0.85rem; color: #805AD5; background: rgba(255,255,255,0.6); padding: 8px 10px; border-radius: 6px; }
-        .advice-example { font-size: 0.85rem; color: #2B6CB0; background: #EBF8FF; padding: 10px 12px; border-radius: 6px; border-left: 3px solid #4299E1; margin-top: 5px; }
-        .advice-block-old { background: #f7fafc; border: 1px dashed #cbd5e0; opacity: 0.8; }
-        .advice-content-old { color: #718096; font-size: 0.85rem; font-style: italic; }
-
+        
         .history-list { display: flex; flex-direction: column; gap: 15px; }
-        .history-item { 
-            background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; 
-            cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
-        }
+        .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
-        .history-time { font-weight: bold; color: #2d3748; font-size: 1.1rem; }
-        .history-preview { font-size: 0.9rem; color: #718096; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
-
-        .thinking-container {
-            background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;
-            padding: 20px; margin-bottom: 20px; position: relative;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
-        }
-        .thinking-log {
-            color: #4A5568; font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 0.9rem; line-height: 1.8;
-            max-height: 350px; overflow-y: auto; white-space: pre-wrap;
-        }
-        .thinking-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 10px;
-        }
-        .thinking-title { font-weight: bold; color: #2D3748; display: flex; align-items: center; gap: 8px; }
-        .thinking-spinner { width: 1.2rem; height: 1.2rem; border: 3px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; animation: spin 1s linear infinite; }
-        .virtual-progress { height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden; width: 100px; }
-        .virtual-bar { height: 100%; background: #6B46C1; width: 0%; transition: width 0.3s; animation: progressAnim 10s infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes progressAnim { 0% { width: 0%; } 50% { width: 70%; } 100% { width: 95%; } }
-
     </style>
 </head>
 <body>
@@ -116,7 +113,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (专家题库版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (八维评估版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -158,25 +155,18 @@
 
         <div id="viewResult" class="hidden">
             <h3 class="text-center text-primary mb-4" id="resultTitle">思维评估报告</h3>
-            <p id="resultSubtitle" class="text-center text-muted mb-5">基于您今天的思考，AI 为每个维度定制了专属建议</p>
             
             <div id="thinkingArea" class="hidden">
                 <div class="thinking-container">
-                    <div class="thinking-header">
-                        <div class="thinking-title">
-                            <div class="thinking-spinner"></div>
-                            <span>DeepSeek 专家正在复盘您的回答...</span>
-                        </div>
-                        <div class="virtual-progress"><div class="virtual-bar"></div></div>
-                    </div>
-                    <div id="thinkingLog" class="thinking-log typing-cursor"></div>
+                    <div id="thinkingLog" class="typing-cursor"></div>
                 </div>
-                <p class="text-muted text-center small">正在实时分析 7 个维度的数据流...</p>
+                <p class="text-muted text-center small">DeepSeek 专家正在生成八维评估模型...</p>
             </div>
 
-            <div id="scoreGrid" class="score-grid hidden"></div>
+            <div id="reportCardsArea" class="hidden">
+                </div>
+
             <div id="historySelectArea" class="history-list hidden"></div>
-            
             <button id="btnBackCal" onclick="location.reload()" class="btn btn-outline-primary w-100 mt-5 py-3 hidden">返回日历</button>
         </div>
     </div>
@@ -188,26 +178,24 @@
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
-    // 🔥 核心升级：植入用户提供的“专家提示词”逻辑
+    // 专家提示词 (生成事例用)
     const EXPERT_PROMPT = `
 # 你的角色 
 你是专业的思维训练题目设计专家，擅长将热点话题事件转化为有趣且具有深度思考价值的思维训练题目。 
-
 # 设计要求 
 内容要包含：
 1. **标题**：简洁有力，引入自媒体风格，激发好奇心。
 2. **背景描述**：提供充分客观的多维度信息（事实、数据、观点），风格有趣不严肃，遵循“滑梯效应”，语言简明，条理分明。
 3. **问题设计**：3个递进式开放性问题，从表象深入本质。问题要与常识相符，拒绝宏大抽象，要与用户生活工作相关。
-
 请严格使用 Markdown 格式（使用 emoji）。
 `;
 
     const DIMENSIONS = ["自我觉知", "价值判断", "情绪掌舵", "深度思考", "意义构建", "视角多元性", "知行合一"];
-    const DIM_ICONS = {"自我觉知":"🪞", "价值判断":"⚖️", "情绪掌舵":"⚓", "深度思考":"🧠", "意义构建":"🌟", "视角多元性":"🔭", "知行合一":"👣"};
     
-    let data = { date: new Date().toLocaleDateString(), time: "", scenario: "", qna: [], scores: [] };
+    let data = { date: new Date().toLocaleDateString(), time: "", scenario: "", qna: [], report: {} };
     let step = 0;
     let currentHistoryList = [];
+    let radarChart = null; // 图表实例
 
     function getKey() { return localStorage.getItem('deepseek_key'); }
     function resetKey() { localStorage.removeItem('deepseek_key'); location.reload(); }
@@ -225,12 +213,12 @@
     function safeJSONParse(str) {
         if(!str) return null;
         try {
-            const start = str.indexOf('[');
-            const end = str.lastIndexOf(']');
+            const start = str.indexOf('{');
+            const end = str.lastIndexOf('}');
             if (start !== -1 && end !== -1) {
                 let jsonStr = str.substring(start, end + 1);
                 jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '');
-                jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+                // 简单的清理
                 return JSON.parse(jsonStr);
             }
             return null;
@@ -259,8 +247,7 @@
 
     function renderHistorySelection(dateStr) {
         document.getElementById('resultTitle').innerText = `${dateStr} 复盘记录`;
-        document.getElementById('resultSubtitle').innerText = `共 ${currentHistoryList.length} 条记录`;
-        document.getElementById('scoreGrid').innerHTML = '';
+        document.getElementById('reportCardsArea').innerHTML = '';
         document.getElementById('thinkingArea').classList.add('hidden');
         document.getElementById('historySelectArea').classList.remove('hidden');
         document.getElementById('btnBackCal').classList.remove('hidden');
@@ -290,10 +277,8 @@
             if(!key) return null;
             localStorage.setItem('deepseek_key', key);
         }
-
         const baseUrl = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL;
         const finalUrl = baseUrl + "/chat/completions";
-
         try {
             const response = await fetch(finalUrl, {
                 method: 'POST',
@@ -304,17 +289,12 @@
                     stream: true 
                 })
             });
-
-            if (!response.ok) throw new Error("API 请求失败");
-
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
             let fullText = "";
-
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n');
                 for (const line of lines) {
@@ -333,41 +313,32 @@
                 }
             }
             return fullText;
-
         } catch (e) {
             alert("连接中断: " + e.message);
             return null;
         }
     }
 
-    // 1. 生成事例 (使用专家提示词)
+    // 1. 生成事例
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
         switchView('viewScenario');
-        
         const el = document.getElementById('textScenario');
         el.textContent = ""; 
         document.getElementById('btnNext1').classList.add('hidden');
-
-        // 🔥 关键修改：指令只要求生成【标题】和【背景描述】
         const systemMsg = EXPERT_PROMPT;
-        const userMsg = "请随机搜寻一个关于个人成长、社会现象或生活哲学的热点话题（如“躺平”、“内卷”、“极简生活”、“AI焦虑”等），严格按照【内容要求】生成【标题】和【背景描述】。注意：暂时**不要**生成“问题设计”部分，只给背景材料。";
-        
-        const res = await streamAI([
-            {role: "system", content: systemMsg},
-            {role: "user", content: userMsg}
-        ], (chunk, fullText) => {
+        const userMsg = "请随机搜寻一个关于个人成长、社会现象或生活哲学的热点话题（如“AI焦虑”、“躺平”、“极简”、“内耗”等），严格按照【内容要求】生成【标题】和【背景描述】。注意：暂时**不要**生成“问题设计”，只给背景。";
+        const res = await streamAI([{role: "system", content: systemMsg},{role: "user", content: userMsg}], (chunk, fullText) => {
             el.textContent = fullText;
             window.scrollTo(0, document.body.scrollHeight);
         });
-
         if(res) {
             data = {
                 date: new Date().toLocaleDateString(),
                 time: new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'}),
                 scenario: res,
                 qna: [],
-                scores: []
+                report: {}
             };
             document.getElementById('refContent').textContent = res;
             document.getElementById('btnNext1').classList.remove('hidden'); 
@@ -376,39 +347,19 @@
 
     function nextStep(view) { switchView(view); if(view === 'viewQuestion') askQuestion(); }
 
-    // 2. 提问 (使用专家提示词生成特定问题)
+    // 2. 提问
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
-        
         document.getElementById('qCount').textContent = step;
         document.getElementById('inputAnswer').value = "";
-        
         const el = document.getElementById('textQuestion');
         el.textContent = "专家正在出题...";
         document.getElementById('btnSubmit').disabled = true;
-
-        // 🔥 关键修改：利用提示词要求生成特定的第 N 个问题
-        const userMsg = `背景材料：
-${data.scenario}
-
-用户历史问答（供参考，不要重复）：
-${JSON.stringify(data.qna)}
-
-当前任务：
-请完全基于上述背景材料，按照【设计要求】中的【问题设计】标准，仅仅提出第 ${step} 个递进式开放性问题。
-要求：
-1. 这是一个“${step === 1 ? '表象' : (step === 2 ? '本质' : '原理')}”层面的问题。
-2. 问题必须有趣、与生活相关，拒绝宏大抽象。
-3. 只输出问题本身，不要输出“问题1：”这种前缀。`;
-
-        const res = await streamAI([
-            {role: "system", content: EXPERT_PROMPT},
-            {role: "user", content: userMsg}
-        ], (chunk, fullText) => {
+        const userMsg = `背景材料：\n${data.scenario}\n\n用户历史问答：\n${JSON.stringify(data.qna)}\n\n当前任务：请完全基于背景，按照【设计要求】，仅仅提出第 ${step} 个递进式开放性问题。要求：1.对应“${step === 1 ? '表象' : (step === 2 ? '本质' : '原理')}”层面。2.有趣、相关。3.只输出问题本身。`;
+        const res = await streamAI([{role: "system", content: EXPERT_PROMPT},{role: "user", content: userMsg}], (chunk, fullText) => {
             el.textContent = fullText;
         });
-
         if(res) {
             data.qna.push({q: res, a: ""});
             document.getElementById('btnSubmit').disabled = false;
@@ -422,53 +373,48 @@ ${JSON.stringify(data.qna)}
         askQuestion();
     }
 
-    // 3. 结果评估 (保持之前的逻辑，因为这是“专家”的阅卷环节)
+    // 3. 最终报告 (生成8张卡片的大JSON)
     async function finishTraining() {
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
-        document.getElementById('scoreGrid').classList.add('hidden');
+        document.getElementById('reportCardsArea').innerHTML = ''; // 清空旧卡片
         document.getElementById('btnBackCal').classList.add('hidden');
         
         const logEl = document.getElementById('thinkingLog');
         logEl.textContent = "";
 
+        // 🔥 超级 Prompt：要求生成8个板块的JSON
         const p = `对话记录：${JSON.stringify(data.qna)}
-请对用户在以下 7 个维度的表现进行深度评估：${DIMENSIONS.join(',')}。
-对于【每一个维度】，请提供以下 5 项内容：
-1. score: 1-10分
-2. reason: 评分理由 (50字以内)
-3. action: 一个具体的提升行动建议 (比如"每天记录...")
-4. why: 解释为什么这个行动有效 (背后的心理学/哲学原理)
-5. example: 一个生动的执行例子 (比如具体的场景或话术)
-⚠️ 必须严格返回 JSON 数组格式，不要包含任何其他文字：
-[{"dim":"自我觉知", "score":8, "reason":"...", "action":"...", "why":"...", "example":"..."}, ...]`;
+请作为一位顶尖的思维教练，根据以上对话，生成一份【深度思维评估报告】。
+请严格返回一个 JSON 对象，包含以下 8 个字段（不要markdown格式，纯JSON）：
+
+1. "radar": { "scores": [8, 7, 9, 6, 8, 5, 7] } // 对应 7 个维度(自我觉知,价值判断,情绪掌舵,深度思考,意义构建,视角多元性,知行合一)的打分(1-10)
+2. "overview": "..." // 思考总览：对用户整体表现的定性评价 (100字左右)
+3. "highlights": [ {"title": "...", "content": "..."} ] // 思考亮点：2-3个具体亮点
+4. "limitations": [ {"title": "...", "content": "...", "tip": "..."} ] // 思考局限性：2-3个不足及改进小贴士
+5. "suggestions": [ {"method": "...", "desc": "..."} ] // 提升建议：2个具体思维模型或方法
+6. "transfer": [ {"domain": "...", "desc": "..."} ] // 知识迁移：关联2个其他学科(如经济学、心理学)的概念
+7. "reward": { "title": "...", "score": 88, "breakdown": [{"item":"基础分","score":30}, ...] } // 思考奖励：赋予一个称号(如“洞察者”)，总分，和得分细则
+8. "quote": "..." // 思考金句：一句富有哲理的总结
+
+⚠️ 必须且只能返回合法的 JSON 格式。`;
 
         const res = await streamAI([
             {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
             {role: "user", content: p}
         ], (chunk, fullText) => {
-            let prettyText = fullText
-                .replace(/"dim":\s*"/g, "\n🔍 分析维度: ")
-                .replace(/"score":\s*/g, "📊 得分: ")
-                .replace(/"reason":\s*"/g, "\n📝 理由: ")
-                .replace(/"action":\s*"/g, "\n💡 建议: ")
-                .replace(/"why":\s*"/g, "\n🌟 原理: ")
-                .replace(/"example":\s*"/g, "\n🌰 栗子: ")
-                .replace(/[{"}\[\],]/g, "") 
-                .replace(/^\s*[\r\n]/gm, "");
-
-            logEl.textContent = prettyText;
+            logEl.textContent = fullText;
             logEl.scrollTop = logEl.scrollHeight;
         });
 
         if(res) {
             const cleanData = safeJSONParse(res);
-            
             if(cleanData) {
-                data.scores = cleanData;
+                data.report = cleanData;
                 document.getElementById('thinkingArea').classList.add('hidden');
-                renderResult(false); 
+                renderCards(cleanData); 
                 
+                // 保存
                 const key = 'life_log_' + data.date;
                 let history = localStorage.getItem(key);
                 let historyList = [];
@@ -480,57 +426,160 @@ ${JSON.stringify(data.qna)}
                 localStorage.setItem(key, JSON.stringify(historyList));
                 renderCalendar();
             } else { 
-                alert("DeepSeek 返回数据格式有误，请刷新重试。\n错误提示：JSON解析失败");
+                alert("报告生成格式有误，请刷新重试。");
             }
         }
     }
 
-    function renderResult(isHistoryMode) {
-        if(isHistoryMode) {
-            document.getElementById('thinkingArea').classList.add('hidden');
-        }
-        document.getElementById('scoreGrid').classList.remove('hidden');
+    // 4. 渲染 8 张卡片
+    function renderCards(report) {
+        const area = document.getElementById('reportCardsArea');
+        area.innerHTML = '';
         document.getElementById('btnBackCal').classList.remove('hidden');
+
+        // 1. 思考能力评估 (雷达图)
+        const radarHtml = `
+        <div class="report-card card-radar" style="animation-delay: 0.1s">
+            <div class="card-title"><i class="bi bi-bar-chart-line-fill"></i> 思考能力评估</div>
+            <div style="max-height: 300px; position: relative;">
+                <canvas id="radarCanvas"></canvas>
+            </div>
+        </div>`;
+        area.innerHTML += radarHtml;
+
+        // 2. 思考总览
+        const overviewHtml = `
+        <div class="report-card card-overview" style="animation-delay: 0.2s">
+            <div class="card-title"><i class="bi bi-info-circle-fill"></i> 思考总览</div>
+            <div>${report.overview}</div>
+        </div>`;
+        area.innerHTML += overviewHtml;
+
+        // 3. 思考亮点
+        let highlightsContent = report.highlights.map(h => 
+            `<div class="highlight-item"><div class="highlight-head">✨ ${h.title}</div><div>${h.content}</div></div>`
+        ).join('');
+        const highlightHtml = `
+        <div class="report-card card-highlight" style="animation-delay: 0.3s">
+            <div class="card-title"><i class="bi bi-stars"></i> 思考亮点</div>
+            ${highlightsContent}
+        </div>`;
+        area.innerHTML += highlightHtml;
+
+        // 4. 思考局限性
+        let limitsContent = report.limitations.map(l => 
+            `<div class="limit-item">
+                <div class="fw-bold text-danger">${l.title}</div>
+                <div class="small">${l.content}</div>
+                <div class="limit-tip"><i class="bi bi-lightbulb"></i> 建议：${l.tip}</div>
+             </div>`
+        ).join('');
+        const limitHtml = `
+        <div class="report-card card-limit" style="animation-delay: 0.4s">
+            <div class="card-title"><i class="bi bi-exclamation-triangle-fill"></i> 思考局限性</div>
+            ${limitsContent}
+        </div>`;
+        area.innerHTML += limitHtml;
+
+        // 5. 提升建议
+        let suggestContent = report.suggestions.map(s => 
+            `<div class="suggest-item"><strong>${s.method}</strong>：${s.desc}</div>`
+        ).join('');
+        const suggestHtml = `
+        <div class="report-card card-suggest" style="animation-delay: 0.5s">
+            <div class="card-title"><i class="bi bi-graph-up-arrow"></i> 提升建议</div>
+            ${suggestContent}
+        </div>`;
+        area.innerHTML += suggestHtml;
+
+        // 6. 知识迁移
+        let transferContent = report.transfer.map(t => 
+            `<div class="mb-2"><span class="transfer-tag">${t.domain}</span> <span class="small">${t.desc}</span></div>`
+        ).join('');
+        const transferHtml = `
+        <div class="report-card card-transfer" style="animation-delay: 0.6s">
+            <div class="card-title"><i class="bi bi-arrow-repeat"></i> 知识迁移</div>
+            ${transferContent}
+        </div>`;
+        area.innerHTML += transferHtml;
+
+        // 7. 思考奖励
+        let breakdownHtml = report.reward.breakdown.map(b => 
+            `<div class="reward-row"><span>${b.item}</span><span>+${b.score}</span></div>`
+        ).join('');
+        const rewardHtml = `
+        <div class="report-card card-reward" style="animation-delay: 0.7s">
+            <div class="card-title justify-content-center"><i class="bi bi-trophy-fill"></i> 思考奖励</div>
+            <i class="bi bi-award-fill text-warning reward-badge"></i>
+            <div class="reward-title">${report.reward.title}</div>
+            <div class="display-4 fw-bold text-dark">${report.reward.score}</div>
+            <div class="reward-score-box">${breakdownHtml}</div>
+        </div>`;
+        area.innerHTML += rewardHtml;
+
+        // 8. 思考金句
+        const quoteHtml = `
+        <div class="report-card card-quote" style="animation-delay: 0.8s">
+            <div class="quote-text">“ ${report.quote} ”</div>
+        </div>`;
+        area.innerHTML += quoteHtml;
+
+        // 延迟渲染图表 (必须等 DOM 插入后)
+        setTimeout(() => {
+            initChart(report.radar.scores);
+        }, 100);
+    }
+
+    function initChart(scores) {
+        const ctx = document.getElementById('radarCanvas');
+        if(!ctx) return;
         
-        document.getElementById('resultTitle').innerText = `${data.date} 评估报告`;
-        document.getElementById('resultSubtitle').innerText = `记录时间：${data.time || '刚刚'}`;
+        // 销毁旧图表
+        if(radarChart) radarChart.destroy();
 
-        const grid = document.getElementById('scoreGrid');
-        grid.innerHTML = ''; 
-
-        data.scores.forEach((s, index) => {
-            const icon = DIM_ICONS[s.dim] || "✨";
-            let colorClass = "bg-primary";
-            let textClass = "text-primary";
-            if(s.score >= 8) { colorClass = "bg-success"; textClass = "text-success"; }
-            if(s.score < 6) { colorClass = "bg-warning"; textClass = "text-warning"; }
-            const delay = index * 0.15; 
-
-            let adviceHtml = '';
-            if (s.action && s.action !== "undefined") {
-                const exampleHtml = s.example ? `<div class="advice-example"><i class="bi bi-pencil-square"></i> 栗子：${s.example}</div>` : '';
-                adviceHtml = `
-                <div class="advice-block">
-                    <div class="advice-header"><i class="bi bi-lightbulb-fill"></i> 专属建议</div>
-                    <div class="advice-content">${s.action}</div>
-                    <div class="advice-why"><i class="bi bi-stars"></i> 原理：${s.why}</div>
-                    ${exampleHtml}
-                </div>`;
-            } else {
-                adviceHtml = `<div class="advice-block advice-block-old"><div class="advice-content advice-content-old">无建议详情。</div></div>`;
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: DIMENSIONS,
+                datasets: [{
+                    label: '能力维度',
+                    data: scores,
+                    fill: true,
+                    backgroundColor: 'rgba(99, 179, 237, 0.2)',
+                    borderColor: 'rgb(99, 179, 237)',
+                    pointBackgroundColor: 'rgb(99, 179, 237)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(99, 179, 237)'
+                }]
+            },
+            options: {
+                elements: { line: { borderWidth: 3 } },
+                scales: {
+                    r: {
+                        angleLines: { display: true },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        ticks: { display: false } // 隐藏刻度数字，更美观
+                    }
+                },
+                plugins: { legend: { display: false } }
             }
-
-            grid.innerHTML += `
-            <div class="score-card" style="animation-delay: ${delay}s">
-                <div class="score-header">
-                    <span class="score-title">${icon} ${s.dim}</span>
-                    <span class="score-num ${textClass}">${s.score}</span>
-                </div>
-                <div class="progress-bg"><div class="progress-bar ${colorClass}" style="width: ${s.score * 10}%"></div></div>
-                <div class="score-reason">${s.reason}</div>
-                ${adviceHtml}
-            </div>`;
         });
+    }
+    
+    // 兼容旧数据的渲染 (如果没有 report 字段，尝试用 scores 渲染旧版)
+    function renderResult(isHistoryMode) {
+        if(isHistoryMode) document.getElementById('thinkingArea').classList.add('hidden');
+        
+        // 检查是新版数据结构还是旧版
+        if (data.report && data.report.overview) {
+            renderCards(data.report);
+        } else if (data.scores) {
+            // 旧数据：只能渲染简陋版（这里简单处理，或者提示不支持）
+            document.getElementById('reportCardsArea').innerHTML = '<div class="alert alert-warning">此为旧版数据，缺少八维评估详情。</div>';
+            document.getElementById('btnBackCal').classList.remove('hidden');
+        }
     }
 
     function renderCalendar() {

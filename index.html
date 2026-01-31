@@ -35,16 +35,31 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
+        /* 🔥 优化后的思考状态区 (不再显示代码) */
         .thinking-container {
-            background: #2d3748; color: #48bb78; font-family: 'Courier New', Courier, monospace;
-            padding: 15px; border-radius: 8px; font-size: 0.85rem; line-height: 1.4;
-            max-height: 300px; overflow-y: auto; margin-bottom: 20px;
-            white-space: pre-wrap; border: 2px solid #4a5568;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+            background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
+            padding: 40px 20px; margin-bottom: 20px; text-align: center;
         }
+        .thinking-spinner { 
+            width: 3rem; height: 3rem; margin: 0 auto 20px;
+            border: 4px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+        .thinking-status { font-size: 1.1rem; color: #4A5568; font-weight: bold; margin-bottom: 10px; }
+        .thinking-sub { font-size: 0.9rem; color: #718096; }
+        .progress-bar-container {
+            width: 80%; margin: 20px auto 0; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #6B46C1, #9F7AEA); width: 0%; 
+            transition: width 0.3s;
+        }
+
         .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
         @keyframes blink { 50% { opacity: 0; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* 报告卡片 */
         .report-card {
             border-radius: 16px; padding: 25px; margin-bottom: 25px;
             background: #fff; border: 1px solid #eee;
@@ -98,7 +113,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (完美修复版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (专家评估版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -157,9 +172,13 @@
             
             <div id="thinkingArea" class="hidden">
                 <div class="thinking-container">
-                    <div id="thinkingLog" class="typing-cursor"></div>
+                    <div class="thinking-spinner"></div>
+                    <div id="thinkingStatus" class="thinking-status">DeepSeek 正在启动...</div>
+                    <div id="thinkingSub" class="thinking-sub">连接思维网络中...</div>
+                    <div class="progress-bar-container">
+                        <div id="thinkingProgress" class="progress-bar-fill"></div>
+                    </div>
                 </div>
-                <p class="text-muted text-center small">DeepSeek 专家正在构建五维评估模型...</p>
             </div>
 
             <div id="reportCardsArea" class="hidden"></div>
@@ -171,11 +190,7 @@
 </div>
 
 <script>
-    // ==========================================
-    // 你的 Worker 地址 (保持原样)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
-    // ==========================================
-
     const EXPERT_PROMPT = `
 # 你的角色 
 你是专业的思维训练题目设计专家。
@@ -207,18 +222,14 @@
         document.getElementById(id).classList.remove('hidden');
     }
 
-    // 🔥 升级版清洗函数：解决JSON解析失败
     function safeJSONParse(str) {
         if(!str) return null;
         try {
-            // 1. 去除代码块
             str = str.replace(/```json/g, '').replace(/```/g, '');
-            // 2. 截取 {} 范围
             const start = str.indexOf('{');
             const end = str.lastIndexOf('}');
             if (start !== -1 && end !== -1) {
                 let jsonStr = str.substring(start, end + 1);
-                // 3. 去除末尾逗号（DeepSeek 常见毛病）
                 jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
                 return JSON.parse(jsonStr);
             }
@@ -393,8 +404,10 @@
         document.getElementById('reportCardsArea').innerHTML = ''; 
         document.getElementById('btnBackCal').classList.add('hidden');
         
-        const logEl = document.getElementById('thinkingLog');
-        logEl.textContent = "";
+        // 状态更新元素
+        const statusEl = document.getElementById('thinkingStatus');
+        const subEl = document.getElementById('thinkingSub');
+        const barEl = document.getElementById('thinkingProgress');
 
         const p = `对话记录：${JSON.stringify(data.qna)}
 请作为思维教练，生成深度评估报告。
@@ -411,20 +424,33 @@
 }
 确保 JSON 格式标准，没有多余逗号。`;
 
+        // 🔥 修复点：这里不再更新文字日志，而是更新进度条和状态文字
         const res = await streamAI([
             {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
             {role: "user", content: p}
         ], (chunk, fullText) => {
-            logEl.textContent = fullText;
-            logEl.scrollTop = logEl.scrollHeight;
+            // 假装根据长度更新进度条，让用户感觉在动
+            const len = fullText.length;
+            let percent = Math.min(len / 1500 * 100, 95); // 假设1500字是满
+            barEl.style.width = percent + '%';
+
+            if(len < 100) { statusEl.textContent = "正在启动思维分析..."; subEl.textContent = "连接 DeepSeek 核心大脑..."; }
+            else if(len < 400) { statusEl.textContent = "正在评估五维能力..."; subEl.textContent = "绘制雷达图数据..."; }
+            else if(len < 800) { statusEl.textContent = "正在挖掘思考亮点..."; subEl.textContent = "寻找您的思维闪光点..."; }
+            else { statusEl.textContent = "正在生成最终建议..."; subEl.textContent = "构建知识迁移与金句..."; }
         });
 
         if(res) {
+            barEl.style.width = '100%';
+            statusEl.textContent = "生成完毕！";
+            
             const cleanData = safeJSONParse(res);
             if(cleanData) {
                 data.report = cleanData;
-                document.getElementById('thinkingArea').classList.add('hidden');
-                renderCards(cleanData); 
+                setTimeout(() => {
+                    document.getElementById('thinkingArea').classList.add('hidden');
+                    renderCards(cleanData);
+                }, 800); // 稍微停顿一下展示100%
                 
                 const key = 'life_log_' + data.date;
                 let history = localStorage.getItem(key);
@@ -444,8 +470,8 @@
 
     function renderCards(report) {
         const area = document.getElementById('reportCardsArea');
-        // 🔥 关键修复：移除隐藏状态，让内容显示出来！
-        area.classList.remove('hidden'); 
+        // 🔥 关键修复：确保显示出来
+        area.classList.remove('hidden');
         area.innerHTML = '';
         document.getElementById('btnBackCal').classList.remove('hidden');
 
@@ -579,7 +605,6 @@
         if (data.report && data.report.overview) {
             renderCards(data.report);
         } else if (data.scores) {
-            // 旧数据兼容
             const area = document.getElementById('reportCardsArea');
             area.classList.remove('hidden');
             area.innerHTML = '<div class="alert alert-warning">此为旧版数据，缺少八维评估详情。</div>';

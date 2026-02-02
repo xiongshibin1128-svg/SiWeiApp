@@ -106,7 +106,7 @@
         .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
         
-        /* 🔥 兜底显示的样式 */
+        /* 兜底显示的样式 */
         .fallback-box { background: #fff3cd; color: #856404; padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px; }
     </style>
 </head>
@@ -121,7 +121,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (完全体)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (R1深度思考版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -181,8 +181,8 @@
             <div id="thinkingArea" class="hidden">
                 <div class="thinking-container">
                     <div class="thinking-spinner"></div>
-                    <div id="thinkingStatus" class="thinking-status">DeepSeek 正在启动...</div>
-                    <div id="thinkingSub" class="thinking-sub">连接思维网络中...</div>
+                    <div id="thinkingStatus" class="thinking-status">DeepSeek R1 深度思考中...</div>
+                    <div id="thinkingSub" class="thinking-sub">正在进行思维链推导...</div>
                     <div class="progress-bar-container">
                         <div id="thinkingProgress" class="progress-bar-fill"></div>
                     </div>
@@ -319,9 +319,12 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
                 body: JSON.stringify({
-                    model: "deepseek-chat",
+                    // 🔥 核心修改：切换为 R1 模型
+                    model: "deepseek-reasoner",
                     messages: messages,
-                    stream: true
+                    stream: true,
+                    // 🔥 开启 JSON 模式 (如果 API 支持)
+                    response_format: { type: 'json_object' }
                 })
             });
             const reader = response.body.getReader();
@@ -401,7 +404,7 @@
         document.getElementById('qCount').textContent = step;
         document.getElementById('inputAnswer').value = "";
         const el = document.getElementById('textQuestion');
-        el.textContent = "专家正在出题...";
+        el.textContent = "DeepSeek R1 正在构思深度问题...";
         document.getElementById('btnSubmit').disabled = true;
         const userMsg = `背景材料：\n${data.scenario}\n\n用户历史问答：\n${JSON.stringify(data.qna)}\n\n当前任务：请完全基于背景，按照【设计要求】，仅仅提出第 ${step} 个递进式开放性问题。要求：1.对应“${step === 1 ? '表象' : (step === 2 ? '本质' : '原理')}”层面。2.有趣、相关。3.只输出问题本身。`;
         const res = await streamAI([{role: "system", content: EXPERT_PROMPT},{role: "user", content: userMsg}], (chunk, fullText) => {
@@ -425,10 +428,9 @@
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
         document.getElementById('reportCardsArea').classList.add('hidden');
-        document.getElementById('fallbackArea').classList.add('hidden'); // 重置
+        document.getElementById('fallbackArea').classList.add('hidden'); 
         document.getElementById('btnBackCal').classList.add('hidden');
         
-        // 状态更新元素
         const statusEl = document.getElementById('thinkingStatus');
         const subEl = document.getElementById('thinkingSub');
         const barEl = document.getElementById('thinkingProgress');
@@ -454,33 +456,31 @@
             {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
             {role: "user", content: p}
         ], (chunk, fullText) => {
-            rawRes = fullText; // 实时保存原始文本
-            // 假装根据长度更新进度条
+            rawRes = fullText; 
             const len = fullText.length;
             let percent = Math.min(len / 1500 * 100, 95); 
             barEl.style.width = percent + '%';
 
-            if(len < 100) { statusEl.textContent = "正在启动思维分析..."; subEl.textContent = "连接 DeepSeek 核心大脑..."; }
-            else if(len < 400) { statusEl.textContent = "正在评估五维能力..."; subEl.textContent = "绘制雷达图数据..."; }
-            else if(len < 800) { statusEl.textContent = "正在挖掘思考亮点..."; subEl.textContent = "寻找您的思维闪光点..."; }
-            else { statusEl.textContent = "正在生成最终建议..."; subEl.textContent = "构建知识迁移与金句..."; }
+            if(len < 100) { statusEl.textContent = "DeepSeek R1 启动..."; subEl.textContent = "深度思考链加载中..."; }
+            else if(len < 400) { statusEl.textContent = "正在进行五维推演..."; subEl.textContent = "运用第一性原理分析..."; }
+            else if(len < 800) { statusEl.textContent = "正在挖掘思维盲区..."; subEl.textContent = "寻找认知突破口..."; }
+            else { statusEl.textContent = "正在生成最终洞察..."; subEl.textContent = "构建跨学科知识迁移..."; }
         });
 
         if(res) {
             barEl.style.width = '100%';
-            statusEl.textContent = "生成完毕！";
+            statusEl.textContent = "深度评估完成！";
             
             const cleanData = safeJSONParse(res);
             
             if(cleanData) {
                 data.report = cleanData;
-                saveData(); // 保存
+                saveData(); 
                 setTimeout(() => {
                     document.getElementById('thinkingArea').classList.add('hidden');
                     renderCards(cleanData);
                 }, 800);
             } else { 
-                // 🔥 兜底模式：显示原始文本
                 console.warn("JSON解析失败，启动兜底显示");
                 document.getElementById('thinkingArea').classList.add('hidden');
                 document.getElementById('fallbackArea').classList.remove('hidden');

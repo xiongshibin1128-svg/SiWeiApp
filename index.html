@@ -8,7 +8,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>var vConsole = new VConsole();</script>
+    <script>
+        // 初始化手机调试台
+        var vConsole = new VConsole();
+    </script>
 
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
@@ -37,6 +40,7 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
+        /* 思考状态区 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
             padding: 40px 20px; margin-bottom: 20px; text-align: center;
@@ -60,6 +64,7 @@
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* 报告卡片 */
         .report-card {
             border-radius: 16px; padding: 25px; margin-bottom: 25px;
             background: #fff; border: 1px solid #eee;
@@ -101,6 +106,7 @@
         .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
         
+        /* 兜底显示的样式 */
         .fallback-box { background: #fff3cd; color: #856404; padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px; }
     </style>
 </head>
@@ -115,7 +121,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (R1终极修复版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (R1 终极版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -203,19 +209,40 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址
+    // 你的 Worker 地址 (请确保是最新配置了DeepSeek的Worker)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
+    // 🔥 优化后的“毒舌导师”提示词
     const EXPERT_PROMPT = `
-# 你的角色 
-你是专业的思维训练题目设计专家。
-# 设计要求 
-内容要包含：
-1. **标题**：简洁有力，自媒体风格。
-2. **背景描述**：客观多维度，风格有趣，滑梯效应，语言简明。
-3. **问题设计**：3个递进式开放性问题，表象->本质->原理。
-请严格使用 Markdown 格式（使用 emoji）。
+# 你的角色
+你是一位拥有30年经验的**“顶级认知觉醒教练”**，擅长用**苏格拉底式提问**和**第一性原理**，撕开生活表象，直击事物本质。你的风格是**犀利、深刻、甚至带点“冒犯性”的幽默**，拒绝平庸的鸡汤和正确的废话。
+
+# 你的任务
+将用户选择的话题转化为一场**“思维手术”**。
+
+# 内容生成要求
+1. **标题 (Title)**：
+   - 必须是**“颠覆认知”**或**“直击痛点”**的自媒体爆款风格。
+   - 拒绝平铺直叙，要制造强烈的**冲突感**或**好奇心缺口**。
+   - 例如：不要说《职场内卷现象分析》，要说《996的真相：为什么你越努力，其实越贫穷？》。
+
+2. **背景描述 (Description)**：
+   - 字数300-400字。
+   - **拒绝像百度百科一样罗列事实**。
+   - **结构**：先抛出一个扎心的痛点/现象 -> 引入一个反直觉的数据或观点 -> 结尾留下一个悬念。
+   - **语气**：像在一个深夜电台里对着老朋友说话，既有同理心，又足够冷峻。
+   - 必须包含：具体的场景描写（让用户有画面感）。
+
+3. **问题设计 (Questions)**：
+   - 设计3个**递进式**的灵魂拷问，拒绝“你觉得怎么样”这种无聊问题。
+   - **Q1 (表象层)**：从用户**切身利益/情绪**切入。例如：“当你xx时，你第一反应是恐惧还是愤怒？”
+   - **Q2 (本质层)**：挑战用户的**底层假设/潜意识**。例如：“你所谓的‘追求稳定’，是不是一种对‘无能’的各种掩饰？”
+   - **Q3 (重构层)**：引导**行动/思维模型**的跃迁。例如：“如果抛开所有社会评价，这件事对你生命的真实刻度是多少？”
+   - **关键**：问题要短促有力，直指人心。
+
+# 输出格式
+请严格使用 Markdown 格式，适当使用 Emoji 调节气氛。
 `;
 
     const DIMENSIONS = ["多角度", "深度", "批判性", "系统性", "创新性"];
@@ -299,7 +326,7 @@
         renderResult(true);
     }
 
-    // 🔥 核心修复：增加 isJson 参数，控制是否开启 JSON 模式
+    // 🔥 核心逻辑：使用 deepseek-reasoner 并在需要时开启 JSON 模式
     async function streamAI(messages, onStream, isJson = false) {
         let key = getKey();
         if(!key) {
@@ -317,7 +344,7 @@
             stream: true
         };
         
-        // 🔥 只有当明确需要 JSON 时，才开启 json_object 模式
+        // 只有当明确需要 JSON 时，才开启 json_object 模式
         if (isJson) {
             requestBody.response_format = { type: 'json_object' };
         }
@@ -450,18 +477,22 @@
         const subEl = document.getElementById('thinkingSub');
         const barEl = document.getElementById('thinkingProgress');
 
+        // 🔥 核心 Prompt 升级：深度心理分析版
         const p = `对话记录：${JSON.stringify(data.qna)}
-请作为思维教练，生成深度评估报告。
+
+请作为一位**“拥有X光般洞察力”的心理咨询师兼战略顾问**，对用户的回答进行深度侧写。
+不要只看表面文字，要分析文字背后的**潜意识、恐惧、渴望和思维盲区**。
+
 请严格返回一个 JSON 对象（不要Markdown格式，不要代码块，只要纯JSON字符串），包含以下 8 个字段：
 {
-"radar": { "scores": [75, 80, 65, 90, 70] }, // 对应 5 个维度：[多角度, 深度, 批判性, 系统性, 创新性] 的打分(0-100)
-"overview": "评价内容...",
-"highlights": [ {"title": "...", "content": "..."} ],
-"limitations": [ {"title": "...", "content": "...", "tip": "..."} ],
-"suggestions": [ {"method": "...", "desc": "..."} ],
-"transfer": [ {"domain": "...", "desc": "..."} ],
-"reward": { "title": "...", "score": 88, "breakdown": [{"item":"基础分","score":30}] },
-"quote": "..."
+"radar": { "scores": [75, 80, 65, 90, 70] }, // 对应 [多角度, 深度, 批判性, 系统性, 创新性]，打分要严格，体现区分度(0-100)
+"overview": "对用户思维模式的【深度定性】。不要讲客套话，直接指出其思维的【底层代码】是什麽（如：防御性思维、稀缺心态、或成长型思维）。字数150字左右。",
+"highlights": [ {"title": "...", "content": "..."} ], // 2个真正的闪光点，要夸到点子上
+"limitations": [ {"title": "...", "content": "...", "tip": "..."} ], // 2个犀利的局限性，例如“你习惯把责任外归因...”，并给出具体改进小贴士
+"suggestions": [ {"method": "...", "desc": "..."} ], // 2个具体的思维模型（如：奥卡姆剃刀、邓宁-克鲁格效应），不仅给名字，要告诉他怎么用在刚才的问题里。
+"transfer": [ {"domain": "...", "desc": "..."} ], // 知识迁移：用一个完全不同领域（如物理学、生物学、经济学）的概念来重新解释刚才的话题。
+"reward": { "title": "...", "score": 88, "breakdown": [{"item":"深度洞察","score":30}] }, // 给一个充满文学性或哲学性的称号（如“迷雾中的守望者”）
+"quote": "..." // 一句为你量身定制的、富有哲理且治愈的金句，最好能击中灵魂。
 }
 确保 JSON 格式标准，没有多余逗号。`;
 

@@ -8,10 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>
-        // 初始化手机调试台
-        var vConsole = new VConsole();
-    </script>
+    <script>var vConsole = new VConsole();</script>
 
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
@@ -40,40 +37,21 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
-        /* 思考状态区 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
             padding: 40px 20px; margin-bottom: 20px; text-align: center;
         }
-        .thinking-spinner { 
-            width: 3rem; height: 3rem; margin: 0 auto 20px;
-            border: 4px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; 
-            animation: spin 1s linear infinite; 
-        }
+        .thinking-spinner { width: 3rem; height: 3rem; margin: 0 auto 20px; border: 4px solid #E2E8F0; border-top-color: #6B46C1; border-radius: 50%; animation: spin 1s linear infinite; }
         .thinking-status { font-size: 1.1rem; color: #4A5568; font-weight: bold; margin-bottom: 10px; }
         .thinking-sub { font-size: 0.9rem; color: #718096; }
-        .progress-bar-container {
-            width: 80%; margin: 20px auto 0; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%; background: linear-gradient(90deg, #6B46C1, #9F7AEA); width: 0%; 
-            transition: width 0.3s;
-        }
-
+        .progress-bar-container { width: 80%; margin: 20px auto 0; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #6B46C1, #9F7AEA); width: 0%; transition: width 0.3s; }
         .typing-cursor::after { content: '▋'; color: var(--primary); animation: blink 1s step-start infinite; margin-left: 2px; }
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 报告卡片 */
-        .report-card {
-            border-radius: 16px; padding: 25px; margin-bottom: 25px;
-            background: #fff; border: 1px solid #eee;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-            animation: fadeInUp 0.6s ease-out forwards;
-            opacity: 0;
-        }
+        .report-card { border-radius: 16px; padding: 25px; margin-bottom: 25px; background: #fff; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.02); animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
         .card-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
 
         .card-radar { border-top: 5px solid #63B3ED; }
@@ -105,8 +83,6 @@
         .history-list { display: flex; flex-direction: column; gap: 15px; }
         .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
-        
-        /* 兜底显示的样式 */
         .fallback-box { background: #fff3cd; color: #856404; padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px; }
     </style>
 </head>
@@ -121,7 +97,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (R1 终极版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (实操干货版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -182,7 +158,7 @@
                 <div class="thinking-container">
                     <div class="thinking-spinner"></div>
                     <div id="thinkingStatus" class="thinking-status">DeepSeek R1 正在深度推演...</div>
-                    <div id="thinkingSub" class="thinking-sub">进行长链条逻辑推理...</div>
+                    <div id="thinkingSub" class="thinking-sub">正在检索经典书籍与理论...</div>
                     <div class="progress-bar-container">
                         <div id="thinkingProgress" class="progress-bar-fill"></div>
                     </div>
@@ -194,28 +170,24 @@
             <div id="fallbackArea" class="hidden">
                 <div class="fallback-box">
                     <h5><i class="bi bi-exclamation-circle-fill"></i> 自动排版受阻</h5>
-                    <p class="small mb-2">报告数据结构复杂，自动绘图失败。但 R1 已经完成了深度分析，您可以直接阅读下方的原始报告：</p>
+                    <p class="small mb-2">报告数据结构复杂，但 R1 已经完成了深度分析。请直接阅读下方报告：</p>
                     <hr>
                     <div id="fallbackContent" style="white-space: pre-wrap; font-size: 0.95rem; color: #333;"></div>
                 </div>
             </div>
 
             <div id="historySelectArea" class="history-list hidden"></div>
-            
             <button id="btnBackCal" onclick="location.reload()" class="btn btn-outline-primary w-100 mt-5 py-3 hidden">返回日历</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ==========================================
-    // 你的 Worker 地址 (请确保是最新配置了DeepSeek的Worker)
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
-    // ==========================================
-
-    // 🔥 优化后的“毒舌导师”提示词
+    
+    // 毒舌导师 Prompt
     const EXPERT_PROMPT = `
-# 你的角色
+# 你的角色 
 你是一位拥有30年经验的**“顶级认知觉醒教练”**，擅长用**苏格拉底式提问**和**第一性原理**，撕开生活表象，直击事物本质。你的风格是**犀利、深刻、甚至带点“冒犯性”的幽默**，拒绝平庸的鸡汤和正确的废话。
 
 # 你的任务
@@ -326,7 +298,6 @@
         renderResult(true);
     }
 
-    // 🔥 核心逻辑：使用 deepseek-reasoner 并在需要时开启 JSON 模式
     async function streamAI(messages, onStream, isJson = false) {
         let key = getKey();
         if(!key) {
@@ -337,17 +308,13 @@
         const baseUrl = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL;
         const finalUrl = baseUrl + "/chat/completions";
         
-        // 构建请求体
         const requestBody = {
-            model: "deepseek-reasoner", // 使用 R1
+            model: "deepseek-reasoner", 
             messages: messages,
             stream: true
         };
         
-        // 只有当明确需要 JSON 时，才开启 json_object 模式
-        if (isJson) {
-            requestBody.response_format = { type: 'json_object' };
-        }
+        if (isJson) { requestBody.response_format = { type: 'json_object' }; }
 
         try {
             const response = await fetch(finalUrl, {
@@ -372,7 +339,6 @@
                         if (jsonStr === '[DONE]') break;
                         try {
                             const json = JSON.parse(jsonStr);
-                            // R1 模型的内容在 choices[0].delta.content
                             const content = json.choices[0].delta.content || "";
                             if (content) {
                                 fullText += content;
@@ -390,7 +356,7 @@
         }
     }
 
-    // 1. 生成事例 (isJson = false)
+    // 1. 生成事例
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
         
@@ -417,7 +383,7 @@
                 el.textContent = fullText;
                 window.scrollTo(0, document.body.scrollHeight);
             },
-            false // 🔥 关闭 JSON 模式
+            false 
         );
         
         if(res) {
@@ -435,7 +401,7 @@
 
     function nextStep(view) { switchView(view); if(view === 'viewQuestion') askQuestion(); }
 
-    // 2. 提问 (isJson = false)
+    // 2. 提问
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
@@ -449,7 +415,7 @@
         const res = await streamAI(
             [{role: "system", content: EXPERT_PROMPT},{role: "user", content: userMsg}], 
             (chunk, fullText) => { el.textContent = fullText; },
-            false // 🔥 关闭 JSON 模式
+            false 
         );
         
         if(res) {
@@ -465,7 +431,7 @@
         askQuestion();
     }
 
-    // 3. 最终报告 (isJson = true)
+    // 3. 最终报告
     async function finishTraining() {
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
@@ -477,7 +443,7 @@
         const subEl = document.getElementById('thinkingSub');
         const barEl = document.getElementById('thinkingProgress');
 
-        // 🔥 核心 Prompt 升级：深度心理分析版
+        // 🔥 核心 Prompt 升级：要求推荐书籍/工具
         const p = `对话记录：${JSON.stringify(data.qna)}
 
 请作为一位**“拥有X光般洞察力”的心理咨询师兼战略顾问**，对用户的回答进行深度侧写。
@@ -489,9 +455,9 @@
 "overview": "对用户思维模式的【深度定性】。不要讲客套话，直接指出其思维的【底层代码】是什麽（如：防御性思维、稀缺心态、或成长型思维）。字数150字左右。",
 "highlights": [ {"title": "...", "content": "..."} ], // 2个真正的闪光点，要夸到点子上
 "limitations": [ {"title": "...", "content": "...", "tip": "..."} ], // 2个犀利的局限性，例如“你习惯把责任外归因...”，并给出具体改进小贴士
-"suggestions": [ {"method": "...", "desc": "..."} ], // 2个具体的思维模型（如：奥卡姆剃刀、邓宁-克鲁格效应），不仅给名字，要告诉他怎么用在刚才的问题里。
+"suggestions": [ {"method": "...", "desc": "..."} ], // 给出2个【极具实操性】的建议。必须包含：1本对症下药的经典书籍（如《非暴力沟通》）或1个具体的思维模型/工具。不要只讲道理，要给资源。
 "transfer": [ {"domain": "...", "desc": "..."} ], // 知识迁移：用一个完全不同领域（如物理学、生物学、经济学）的概念来重新解释刚才的话题。
-"reward": { "title": "...", "score": 88, "breakdown": [{"item":"深度洞察","score":30}] }, // 给一个充满文学性或哲学性的称号（如“迷雾中的守望者”）
+"reward": { "title": "...", "score": 88, "breakdown": [{"item":"深度洞察","score":30}] }, // 给一个充满文学性或哲学性的称号
 "quote": "..." // 一句为你量身定制的、富有哲理且治愈的金句，最好能击中灵魂。
 }
 确保 JSON 格式标准，没有多余逗号。`;
@@ -511,7 +477,7 @@
                 else if(len < 800) { statusEl.textContent = "正在挖掘思维盲区..."; subEl.textContent = "寻找认知突破口..."; }
                 else { statusEl.textContent = "正在生成最终洞察..."; subEl.textContent = "构建跨学科知识迁移..."; }
             },
-            true // 🔥 开启 JSON 模式 (仅此步骤)
+            true // 🔥 开启 JSON 模式
         );
 
         if(res) {
@@ -605,7 +571,7 @@
             ).join('');
             area.innerHTML += `
             <div class="report-card card-suggest" style="animation-delay: 0.5s">
-                <div class="card-title"><i class="bi bi-graph-up-arrow"></i> 提升建议</div>
+                <div class="card-title"><i class="bi bi-graph-up-arrow"></i> 提升建议 (含书单)</div>
                 ${suggestContent}
             </div>`;
         }

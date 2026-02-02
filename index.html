@@ -8,10 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>
-        // 初始化手机调试台
-        var vConsole = new VConsole();
-    </script>
+    <script>var vConsole = new VConsole();</script>
 
     <style>
         :root { --primary: #6B46C1; --bg: #F7FAFC; }
@@ -40,7 +37,6 @@
         .home-btn:hover { background: rgba(255,255,255,0.4); }
         .settings-area { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
 
-        /* 思考状态区 */
         .thinking-container {
             background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px;
             padding: 40px 20px; margin-bottom: 20px; text-align: center;
@@ -64,7 +60,6 @@
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 报告卡片 */
         .report-card {
             border-radius: 16px; padding: 25px; margin-bottom: 25px;
             background: #fff; border: 1px solid #eee;
@@ -106,7 +101,6 @@
         .history-item { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .history-item:hover { border-color: var(--primary); background: #FAF5FF; transform: translateX(5px); }
         
-        /* 兜底显示的样式 */
         .fallback-box { background: #fff3cd; color: #856404; padding: 20px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px; }
     </style>
 </head>
@@ -121,7 +115,7 @@
     <div class="header">
         <button onclick="switchView('viewHome')" class="home-btn" title="返回首页"><i class="bi bi-house-door-fill"></i></button>
         <h2 class="fw-bold mb-1"><i class="bi bi-journal-bookmark-fill me-2"></i>生命之书</h2>
-        <p class="opacity-75 mb-0 small">深度思维训练 (R1深度思考版)</p>
+        <p class="opacity-75 mb-0 small">深度思维训练 (R1终极修复版)</p>
         <button onclick="resetKey()" class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" style="font-size: 0.7rem;">重置Key</button>
     </div>
 
@@ -181,8 +175,8 @@
             <div id="thinkingArea" class="hidden">
                 <div class="thinking-container">
                     <div class="thinking-spinner"></div>
-                    <div id="thinkingStatus" class="thinking-status">DeepSeek R1 深度思考中...</div>
-                    <div id="thinkingSub" class="thinking-sub">正在进行思维链推导...</div>
+                    <div id="thinkingStatus" class="thinking-status">DeepSeek R1 正在深度推演...</div>
+                    <div id="thinkingSub" class="thinking-sub">进行长链条逻辑推理...</div>
                     <div class="progress-bar-container">
                         <div id="thinkingProgress" class="progress-bar-fill"></div>
                     </div>
@@ -194,7 +188,7 @@
             <div id="fallbackArea" class="hidden">
                 <div class="fallback-box">
                     <h5><i class="bi bi-exclamation-circle-fill"></i> 自动排版受阻</h5>
-                    <p class="small mb-2">网络波动或格式原因导致图表生成失败，但 AI 已经完成了分析。您可以直接阅读下方的原始报告：</p>
+                    <p class="small mb-2">报告数据结构复杂，自动绘图失败。但 R1 已经完成了深度分析，您可以直接阅读下方的原始报告：</p>
                     <hr>
                     <div id="fallbackContent" style="white-space: pre-wrap; font-size: 0.95rem; color: #333;"></div>
                 </div>
@@ -209,7 +203,7 @@
 
 <script>
     // ==========================================
-    // 你的 Worker 地址 (保持原样)
+    // 你的 Worker 地址
     const WORKER_URL = "https://purple-flower-d965.xiongshibin1128.workers.dev"; 
     // ==========================================
 
@@ -305,7 +299,8 @@
         renderResult(true);
     }
 
-    async function streamAI(messages, onStream) {
+    // 🔥 核心修复：增加 isJson 参数，控制是否开启 JSON 模式
+    async function streamAI(messages, onStream, isJson = false) {
         let key = getKey();
         if(!key) {
             key = prompt("请输入 DeepSeek API Key:");
@@ -314,19 +309,28 @@
         }
         const baseUrl = WORKER_URL.endsWith('/') ? WORKER_URL.slice(0, -1) : WORKER_URL;
         const finalUrl = baseUrl + "/chat/completions";
+        
+        // 构建请求体
+        const requestBody = {
+            model: "deepseek-reasoner", // 使用 R1
+            messages: messages,
+            stream: true
+        };
+        
+        // 🔥 只有当明确需要 JSON 时，才开启 json_object 模式
+        if (isJson) {
+            requestBody.response_format = { type: 'json_object' };
+        }
+
         try {
             const response = await fetch(finalUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-                body: JSON.stringify({
-                    // 🔥 核心修改：切换为 R1 模型
-                    model: "deepseek-reasoner",
-                    messages: messages,
-                    stream: true,
-                    // 🔥 开启 JSON 模式 (如果 API 支持)
-                    response_format: { type: 'json_object' }
-                })
+                body: JSON.stringify(requestBody)
             });
+            
+            if(!response.ok) throw new Error("API 请求失败: " + response.status);
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
             let fullText = "";
@@ -341,6 +345,7 @@
                         if (jsonStr === '[DONE]') break;
                         try {
                             const json = JSON.parse(jsonStr);
+                            // R1 模型的内容在 choices[0].delta.content
                             const content = json.choices[0].delta.content || "";
                             if (content) {
                                 fullText += content;
@@ -353,11 +358,12 @@
             return fullText;
         } catch (e) {
             alert("连接中断: " + e.message);
+            console.error(e);
             return null;
         }
     }
 
-    // 1. 生成事例
+    // 1. 生成事例 (isJson = false)
     async function startDaily() {
         if(WORKER_URL.includes("在这里填入")) { alert("请设置 WORKER_URL"); return; }
         
@@ -378,10 +384,15 @@
             userMsg = `请专门搜寻一个关于【${topic}】领域的具体热门话题或争议现象。严格按照【内容要求】生成【标题】和【背景描述】。字数约${wordLimit}。注意：暂时**不要**生成“问题设计”。`;
         }
 
-        const res = await streamAI([{role: "system", content: systemMsg},{role: "user", content: userMsg}], (chunk, fullText) => {
-            el.textContent = fullText;
-            window.scrollTo(0, document.body.scrollHeight);
-        });
+        const res = await streamAI(
+            [{role: "system", content: systemMsg},{role: "user", content: userMsg}], 
+            (chunk, fullText) => {
+                el.textContent = fullText;
+                window.scrollTo(0, document.body.scrollHeight);
+            },
+            false // 🔥 关闭 JSON 模式
+        );
+        
         if(res) {
             data = {
                 date: new Date().toLocaleDateString(),
@@ -397,7 +408,7 @@
 
     function nextStep(view) { switchView(view); if(view === 'viewQuestion') askQuestion(); }
 
-    // 2. 提问
+    // 2. 提问 (isJson = false)
     async function askQuestion() {
         step++;
         if(step > 3) { finishTraining(); return; }
@@ -407,9 +418,13 @@
         el.textContent = "DeepSeek R1 正在构思深度问题...";
         document.getElementById('btnSubmit').disabled = true;
         const userMsg = `背景材料：\n${data.scenario}\n\n用户历史问答：\n${JSON.stringify(data.qna)}\n\n当前任务：请完全基于背景，按照【设计要求】，仅仅提出第 ${step} 个递进式开放性问题。要求：1.对应“${step === 1 ? '表象' : (step === 2 ? '本质' : '原理')}”层面。2.有趣、相关。3.只输出问题本身。`;
-        const res = await streamAI([{role: "system", content: EXPERT_PROMPT},{role: "user", content: userMsg}], (chunk, fullText) => {
-            el.textContent = fullText;
-        });
+        
+        const res = await streamAI(
+            [{role: "system", content: EXPERT_PROMPT},{role: "user", content: userMsg}], 
+            (chunk, fullText) => { el.textContent = fullText; },
+            false // 🔥 关闭 JSON 模式
+        );
+        
         if(res) {
             data.qna.push({q: res, a: ""});
             document.getElementById('btnSubmit').disabled = false;
@@ -423,7 +438,7 @@
         askQuestion();
     }
 
-    // 3. 最终报告
+    // 3. 最终报告 (isJson = true)
     async function finishTraining() {
         switchView('viewResult');
         document.getElementById('thinkingArea').classList.remove('hidden');
@@ -452,20 +467,21 @@
 
         let rawRes = "";
 
-        const res = await streamAI([
-            {role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},
-            {role: "user", content: p}
-        ], (chunk, fullText) => {
-            rawRes = fullText; 
-            const len = fullText.length;
-            let percent = Math.min(len / 1500 * 100, 95); 
-            barEl.style.width = percent + '%';
+        const res = await streamAI(
+            [{role: "system", content: "你是一位专业、有洞察力且温柔的生活教练。"},{role: "user", content: p}], 
+            (chunk, fullText) => {
+                rawRes = fullText; 
+                const len = fullText.length;
+                let percent = Math.min(len / 1500 * 100, 95); 
+                barEl.style.width = percent + '%';
 
-            if(len < 100) { statusEl.textContent = "DeepSeek R1 启动..."; subEl.textContent = "深度思考链加载中..."; }
-            else if(len < 400) { statusEl.textContent = "正在进行五维推演..."; subEl.textContent = "运用第一性原理分析..."; }
-            else if(len < 800) { statusEl.textContent = "正在挖掘思维盲区..."; subEl.textContent = "寻找认知突破口..."; }
-            else { statusEl.textContent = "正在生成最终洞察..."; subEl.textContent = "构建跨学科知识迁移..."; }
-        });
+                if(len < 100) { statusEl.textContent = "DeepSeek R1 启动..."; subEl.textContent = "深度思考链加载中..."; }
+                else if(len < 400) { statusEl.textContent = "正在进行五维推演..."; subEl.textContent = "运用第一性原理分析..."; }
+                else if(len < 800) { statusEl.textContent = "正在挖掘思维盲区..."; subEl.textContent = "寻找认知突破口..."; }
+                else { statusEl.textContent = "正在生成最终洞察..."; subEl.textContent = "构建跨学科知识迁移..."; }
+            },
+            true // 🔥 开启 JSON 模式 (仅此步骤)
+        );
 
         if(res) {
             barEl.style.width = '100%';
